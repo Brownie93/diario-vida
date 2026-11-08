@@ -1,0 +1,1619 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark" data-accent="dorado">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Diario de Vida</title>
+<meta name="theme-color" content="#0f1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Diario">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ff-head:'Cinzel','Palatino Linotype',Palatino,Georgia,serif;
+  --ff:'Inter',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --ff-mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --r:14px;
+}
+html{font-size:16px;-webkit-text-size-adjust:100%}
+html[data-theme="dark"]{--bg:#0f1117;--panel:#171a23;--panel2:#1f2330;--border:#2b3142;--text:#ebe8df;--dim:#9aa1b5;--shadow:0 6px 22px rgba(0,0,0,.35);--danger:#ef6f66;--ok:#5fcf8f;color-scheme:dark}
+html[data-theme="light"]{--bg:#f1ead9;--panel:#fbf7ec;--panel2:#f3ecda;--border:#d9ceb0;--text:#2a2823;--dim:#6a6455;--shadow:0 4px 16px rgba(70,55,20,.12);--danger:#b3392f;--ok:#1f8a4c;color-scheme:light}
+html[data-theme="dark"][data-accent="dorado"]{--accent:#e0aa4a;--ink:#2b1d04;--accent2:#4cc9b4}
+html[data-theme="light"][data-accent="dorado"]{--accent:#a8650a;--ink:#fff8ea;--accent2:#17806f}
+html[data-theme="dark"][data-accent="arcano"]{--accent:#a98bf0;--ink:#1c1233;--accent2:#56d6c9}
+html[data-theme="light"][data-accent="arcano"]{--accent:#6540c0;--ink:#f7f3ff;--accent2:#0c8c80}
+html[data-theme="dark"][data-accent="bosque"]{--accent:#6fcf8a;--ink:#08210f;--accent2:#e0b64f}
+html[data-theme="light"][data-accent="bosque"]{--accent:#25783f;--ink:#effaf1;--accent2:#a4690b}
+html[data-theme="dark"][data-accent="sakura"]{--accent:#f08fb6;--ink:#35101f;--accent2:#8fd3f0}
+html[data-theme="light"][data-accent="sakura"]{--accent:#c0346f;--ink:#fff1f6;--accent2:#1d77a6}
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:var(--ff);color:var(--text);background:var(--bg);min-height:100vh;min-height:100dvh;line-height:1.45;
+  background-image:radial-gradient(1100px 480px at 85% -8%,color-mix(in srgb,var(--accent) 11%,transparent),transparent),radial-gradient(800px 400px at -5% 105%,color-mix(in srgb,var(--accent2) 8%,transparent),transparent);
+  background-attachment:fixed}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+[hidden]{display:none!important}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.muted{color:var(--dim)}
+.sm{font-size:.82rem}
+h1,h2,h3{font-family:var(--ff-head);margin:0;letter-spacing:.04em}
+h2{font-size:.95rem;text-transform:uppercase;display:flex;align-items:center;gap:.5rem;margin-bottom:.8rem}
+h2::before{content:"✦";color:var(--accent);font-size:.8em}
+
+/* ── estructura ── */
+.shell{display:grid;grid-template-columns:minmax(0,1fr);min-height:100vh;min-height:100dvh}
+.rail{position:fixed;z-index:20;left:0;right:0;bottom:0;display:flex;background:color-mix(in srgb,var(--panel) 94%,transparent);backdrop-filter:blur(10px);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+.rail .brand{display:none}
+.navbtn{flex:1;background:none;border:0;padding:.55rem 0 .6rem;display:flex;flex-direction:column;align-items:center;gap:.1rem;color:var(--dim)}
+.navbtn .ni{font-size:1.35rem;line-height:1}
+.navbtn .nl{font-size:.64rem;font-weight:700;letter-spacing:.06em}
+.navbtn.active{color:var(--accent)}
+.main-col{min-width:0;display:flex;flex-direction:column}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.9rem 1rem .4rem;padding-top:calc(.9rem + env(safe-area-inset-top))}
+.topbar h1{font-size:1.15rem}
+.topbar .sub{font-size:.78rem;color:var(--dim)}
+main{padding:.3rem 1rem calc(5.5rem + env(safe-area-inset-bottom));width:100%;max-width:1500px;margin:0 auto}
+.view{display:none}
+.view.active{display:block;animation:fade .18s ease}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+@media (min-width:760px){
+  .shell{grid-template-columns:92px minmax(0,1fr)}
+  .rail{position:sticky;top:0;height:100vh;height:100dvh;flex-direction:column;justify-content:flex-start;align-items:stretch;border-top:0;border-right:1px solid var(--border);padding:1rem .4rem;gap:.35rem;backdrop-filter:none;background:var(--panel)}
+  .rail .brand{display:flex;flex-direction:column;align-items:center;gap:.2rem;margin-bottom:1rem;font-family:var(--ff-head);font-size:.62rem;text-align:center;color:var(--accent);letter-spacing:.08em;text-transform:uppercase}
+  .rail .brand .brand-ico{font-size:1.7rem}
+  .navbtn{flex:none;padding:.7rem 0;border-radius:12px}
+  .navbtn:hover{background:var(--panel2)}
+  .navbtn.active{background:color-mix(in srgb,var(--accent) 14%,var(--panel2))}
+  main{padding:.5rem 1.6rem 2rem}
+  .topbar{padding:1.2rem 1.6rem .5rem}
+}
+@media (min-width:1180px){
+  .shell{grid-template-columns:230px minmax(0,1fr)}
+  .rail{padding:1.2rem .8rem}
+  .rail .brand{flex-direction:row;justify-content:flex-start;gap:.7rem;font-size:.85rem;text-align:left;padding:0 .4rem}
+  .navbtn{flex-direction:row;gap:.8rem;padding:.7rem .9rem;justify-content:flex-start}
+  .navbtn .nl{font-size:.8rem}
+  main{padding:.6rem 2.2rem 2.5rem}
+  .topbar{padding:1.3rem 2.2rem .5rem}
+}
+
+/* ── componentes ── */
+.card{background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:1rem;box-shadow:var(--shadow),inset 0 0 0 1px color-mix(in srgb,var(--accent) 7%,transparent);margin-bottom:1rem}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:.4rem;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:.55rem .9rem;font-size:.88rem;font-weight:600;min-height:40px;transition:background .15s,border-color .15s}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn.sm{padding:.3rem .65rem;min-height:34px;font-size:.8rem}
+.btn.danger{color:var(--danger)}
+.ib{width:40px;height:40px;border-radius:10px;background:var(--panel2);border:1px solid var(--border);font-size:1.2rem;line-height:1;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.ib:hover{border-color:var(--accent)}
+.chip{display:inline-flex;align-items:center;gap:.4rem;background:var(--panel2);border:1px solid var(--border);border-radius:999px;padding:.3rem .7rem;font-size:.76rem;font-weight:600;white-space:nowrap}
+.chip .dot{width:8px;height:8px;border-radius:50%;background:var(--dim)}
+.chip[data-s="ok"] .dot{background:var(--ok)}
+.chip[data-s="syncing"] .dot{background:var(--accent);animation:pulse 1s infinite}
+.chip[data-s="pending"] .dot,.chip[data-s="offline"] .dot{background:var(--accent2)}
+.chip[data-s="error"] .dot{background:var(--danger)}
+@keyframes pulse{50%{opacity:.25}}
+.banner{margin:.3rem 1rem 0;padding:.65rem .9rem;border-radius:12px;background:color-mix(in srgb,var(--accent) 16%,var(--panel));border:1px solid color-mix(in srgb,var(--accent) 45%,var(--border));display:flex;align-items:center;gap:.7rem;justify-content:space-between;flex-wrap:wrap;font-size:.9rem}
+@media (min-width:760px){.banner{margin:.3rem 1.6rem 0}}
+@media (min-width:1180px){.banner{margin:.3rem 2.2rem 0}}
+.switch{position:relative;width:46px;height:26px;border-radius:13px;background:var(--panel2);border:1px solid var(--border);flex:none;padding:0}
+.switch::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--dim);transition:.2s}
+.switch[aria-checked="true"]{background:var(--accent);border-color:var(--accent)}
+.switch[aria-checked="true"]::after{left:23px;background:var(--ink)}
+input[type=text],input[type=password],input[type=url],input[type=search],select{width:100%;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:.6rem .75rem;min-height:42px}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+.seg{display:inline-flex;background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:3px;gap:2px}
+.seg button{background:none;border:0;border-radius:8px;padding:.4rem .8rem;font-size:.82rem;font-weight:600;color:var(--dim)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--ink)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.8rem 0;border-bottom:1px solid var(--border)}
+.row:last-child{border-bottom:0}
+.row .lbl{font-weight:600;font-size:.92rem}
+.row .desc{font-size:.78rem;color:var(--dim);margin-top:.1rem}
+.row.col{flex-direction:column;align-items:stretch;gap:.5rem}
+.swatches{display:flex;gap:.5rem}
+.swatch{width:34px;height:34px;border-radius:50%;border:3px solid transparent;box-shadow:0 0 0 1px var(--border)}
+.swatch[aria-pressed="true"]{border-color:var(--text)}
+details{font-size:.85rem;color:var(--dim)}
+details summary{cursor:pointer;font-weight:600;color:var(--text);padding:.3rem 0}
+details ol{margin:.4rem 0 0;padding-left:1.2rem}
+details li{margin:.25rem 0}
+code{font-family:var(--ff-mono);font-size:.85em;background:var(--panel2);padding:.1em .35em;border-radius:5px}
+
+/* ── YO ── */
+.yo-grid{display:grid;gap:1rem;grid-template-columns:minmax(0,1fr)}.yo-grid>*{min-width:0}
+@media (min-width:900px){.yo-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.yo-grid .wide{grid-column:1/-1}}
+@media (min-width:1300px){.yo-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.yo-grid .span2{grid-column:span 2}}
+.yo-grid .card{margin:0}
+.hero{display:flex;gap:1rem;align-items:center}
+.avatar{width:76px;height:76px;flex:none;clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%);background:linear-gradient(145deg,var(--accent),var(--accent2));display:grid;place-items:center}
+.avatar>span{width:68px;height:68px;clip-path:inherit;background:var(--panel);display:grid;place-items:center;font-family:var(--ff-head);font-weight:700;font-size:1.8rem;color:var(--accent)}
+.hero h3{font-size:1.2rem}
+.hero .title{color:var(--accent);font-size:.82rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.xp{margin-top:.9rem}
+.xpbar{height:14px;border-radius:7px;background:var(--panel2);border:1px solid var(--border);overflow:hidden;position:relative}
+.xpbar>i{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:7px;transition:width .5s ease}
+.xpbar::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(10% - 1px),rgba(0,0,0,.18) calc(10% - 1px) 10%)}
+.xp .meta{display:flex;justify-content:space-between;font-size:.74rem;color:var(--dim);margin-top:.3rem;font-family:var(--ff-mono)}
+.statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;margin-top:1rem}
+.stat{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:.6rem;text-align:center}
+.stat b{display:block;font-family:var(--ff-mono);font-size:1.35rem;color:var(--accent2)}
+.stat span{font-size:.7rem;color:var(--dim)}
+.quest{display:flex;align-items:center;gap:.8rem;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:.7rem .8rem;margin-bottom:.55rem;width:100%;text-align:left}
+.quest .qi{font-size:1.5rem}
+.quest .qt{flex:1;min-width:0}
+.quest .qt b{display:block;font-size:.9rem}
+.quest .qt small{color:var(--dim);font-size:.75rem}
+.quest .qx{font-family:var(--ff-mono);font-size:.72rem;color:var(--accent);border:1px solid var(--accent);border-radius:999px;padding:.1rem .45rem}
+.quest .qc{width:30px;height:30px;border-radius:9px;border:2px solid var(--border);display:grid;place-items:center;color:transparent;flex:none}
+.quest.done{border-color:color-mix(in srgb,var(--ok) 55%,var(--border))}
+.quest.done .qc{background:var(--ok);border-color:var(--ok);color:#fff}
+.quest.done .qx{opacity:.5}
+.week{display:grid;grid-template-columns:repeat(7,1fr);gap:.35rem;margin-top:.6rem}
+.week button{background:var(--panel2);border:1px solid var(--border);border-radius:10px;padding:.45rem 0;display:flex;flex-direction:column;align-items:center;gap:.15rem;font-size:.7rem;color:var(--dim)}
+.week button b{font-size:1rem;color:var(--text)}
+.week button .t{font-size:1rem;opacity:.25;filter:grayscale(1)}
+.week button.on{border-color:var(--ok)}
+.week button.on .t{opacity:1;filter:none}
+.week button.today{box-shadow:0 0 0 2px var(--accent)}
+.bar{margin:.55rem 0}
+.bar .l{display:flex;justify-content:space-between;font-size:.82rem;margin-bottom:.2rem}
+.bar .l b{font-family:var(--ff-mono)}
+.bar .track{height:10px;border-radius:5px;background:var(--panel2);border:1px solid var(--border);overflow:hidden}
+.bar .track i{display:block;height:100%;background:var(--accent2);border-radius:5px;transition:width .5s}
+.heat{overflow-x:auto;padding-bottom:.4rem}
+.heat .g{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,13px);grid-auto-columns:13px;gap:3px;width:max-content}
+.heat .c{width:13px;height:13px;border-radius:3px;background:var(--panel2);border:1px solid color-mix(in srgb,var(--border) 60%,transparent)}
+.heat .c.l1{background:color-mix(in srgb,var(--accent) 28%,var(--panel2))}
+.heat .c.l2{background:color-mix(in srgb,var(--accent) 60%,var(--panel2))}
+.heat .c.l3{background:var(--accent)}
+.heat .c.pill::after{content:"";display:block;width:4px;height:4px;border-radius:50%;background:var(--ok);margin:3.5px}
+.heat .c.future{opacity:.25}
+.heat-leg{display:flex;gap:.9rem;flex-wrap:wrap;font-size:.72rem;color:var(--dim);margin-top:.4rem;align-items:center}
+.heat-leg i{display:inline-block;width:11px;height:11px;border-radius:3px;vertical-align:-1px;margin-right:.25rem;background:var(--panel2);border:1px solid var(--border)}
+.ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:.55rem}
+.ach>div{background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:.6rem;text-align:center;opacity:.45;filter:grayscale(1)}
+.ach>div.on{opacity:1;filter:none;border-color:color-mix(in srgb,var(--accent) 60%,var(--border))}
+.ach .ai{font-size:1.5rem}
+.ach b{display:block;font-size:.78rem}
+.ach small{display:block;font-size:.68rem;color:var(--dim)}
+.mem{display:block;width:100%;text-align:left;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:.65rem .8rem;margin-bottom:.5rem}
+.mem b{font-size:.78rem;color:var(--accent)}
+.mem p{margin:.2rem 0 0;font-size:.88rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+
+/* ── DIARIO ── */
+.diario-grid{display:grid;gap:1rem;grid-template-columns:minmax(0,1fr);align-items:start}
+@media (min-width:900px){.diario-grid{grid-template-columns:minmax(310px,390px) 1fr}.cal-col{position:sticky;top:1rem}}
+@media (max-width:899px){.cal-col{display:none}.cal-col.open{display:block}}
+.only-small{display:none!important}
+@media (max-width:899px){.only-small{display:inline-flex!important}}
+.only-touch{display:none!important}
+@media (pointer:coarse){.only-touch{display:inline-flex!important}}
+.cal-head{display:flex;align-items:center;justify-content:space-between;gap:.5rem;margin-bottom:.6rem}
+.cal-title{background:none;border:0;font-family:var(--ff-head);font-size:1.05rem;font-weight:700;letter-spacing:.05em}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-grid .dow{text-align:center;font-size:.68rem;color:var(--dim);padding-bottom:.2rem;font-weight:600}
+.day{aspect-ratio:1;min-height:42px;border-radius:10px;background:none;border:1px solid transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:.88rem;position:relative}
+.day:hover{border-color:var(--border);background:var(--panel2)}
+.day.empty{visibility:hidden}
+.day.today{color:var(--accent);font-weight:800;border-color:color-mix(in srgb,var(--accent) 50%,transparent)}
+.day.sel{background:var(--accent);color:var(--ink);font-weight:800;border-color:var(--accent)}
+.day .ind{display:flex;gap:3px;height:6px;align-items:center}
+.day .ind i{width:5px;height:5px;border-radius:50%;background:var(--accent2)}
+.day .ind i.m{border-radius:1px;background:var(--accent)}
+.day .ind i.p{background:var(--ok)}
+.day.sel .ind i{background:var(--ink)}
+.cal-sum{font-size:.78rem;margin-top:.7rem;display:flex;gap:.9rem;flex-wrap:wrap}
+.ed-head{display:flex;align-items:center;gap:.5rem;margin-bottom:.8rem}
+.ed-date{flex:1;min-width:0}
+.ed-date b{display:block;font-family:var(--ff-head);font-size:1.05rem;line-height:1.2}
+.mood-row{display:flex;align-items:center;gap:.4rem;margin-bottom:.7rem}
+.mood-row .muted{margin-right:.3rem;font-size:.82rem}
+.mood-row button{width:44px;height:44px;border-radius:12px;background:var(--panel2);border:1px solid var(--border);font-size:1.4rem;filter:grayscale(.9);opacity:.65}
+.mood-row button[aria-checked="true"]{filter:none;opacity:1;border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
+textarea#edText{width:100%;min-height:240px;resize:vertical;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;font-size:1rem;line-height:1.6}
+@media (min-width:900px){textarea#edText{min-height:340px}}
+.ed-meta{display:flex;justify-content:space-between;font-size:.74rem;color:var(--dim);margin:.35rem .1rem .8rem}
+.media-bar{display:flex;gap:.5rem;flex-wrap:wrap}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:.55rem;margin-top:.7rem}
+.gallery:empty{display:none}
+.tile{position:relative;aspect-ratio:1;border-radius:12px;overflow:hidden;background:var(--panel2);border:1px solid var(--border);padding:0;display:block;width:100%}
+.tile img,.tile video{width:100%;height:100%;object-fit:cover;display:block}
+.tile .badge{position:absolute;left:6px;bottom:6px;background:rgba(0,0,0,.65);color:#fff;font-size:.68rem;padding:.1rem .4rem;border-radius:6px}
+.tile .ph{position:absolute;inset:0;display:grid;place-items:center;text-align:center;font-size:.72rem;color:var(--dim);padding:.4rem}
+.tile .del{position:absolute;top:5px;right:5px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:0;font-size:.8rem;display:grid;place-items:center}
+.tile .prog{position:absolute;left:0;bottom:0;height:4px;background:var(--accent)}
+.drop-on{outline:2px dashed var(--accent);outline-offset:-6px}
+.pill-toggle{width:100%;display:flex;align-items:center;gap:.8rem;margin-top:1rem;background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:.8rem 1rem;text-align:left}
+.pill-toggle .pi{font-size:1.6rem;filter:grayscale(1);opacity:.5}
+.pill-toggle .pt{flex:1;font-weight:700}
+.pill-toggle .pt small{display:block;font-weight:500;color:var(--dim);font-size:.75rem}
+.pill-toggle .pc{width:32px;height:32px;border-radius:10px;border:2px solid var(--border);display:grid;place-items:center;color:transparent;font-weight:900}
+.pill-toggle[aria-pressed="true"]{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 12%,var(--panel2))}
+.pill-toggle[aria-pressed="true"] .pi{filter:none;opacity:1}
+.pill-toggle[aria-pressed="true"] .pc{background:var(--ok);border-color:var(--ok);color:#fff}
+.actions{display:flex;gap:.6rem;align-items:center;margin-top:1rem;flex-wrap:wrap}
+
+/* ── HISTORIAL ── */
+.hist-bar{display:flex;gap:.6rem;flex-wrap:wrap;align-items:center;margin-bottom:1rem}
+.hist-bar input{flex:1;min-width:200px}
+.hlist{display:grid;gap:.7rem;grid-template-columns:minmax(0,1fr)}
+@media (min-width:1000px){.hlist{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.hcard{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--border);border-radius:var(--r);padding:.8rem 1rem;box-shadow:var(--shadow)}
+.hcard:hover{border-color:var(--accent)}
+.hcard .hh{display:flex;justify-content:space-between;gap:.5rem;font-size:.82rem;color:var(--accent);font-weight:700;margin-bottom:.25rem}
+.hcard p{margin:0;font-size:.9rem;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:pre-wrap;word-break:break-word}
+.hcard mark{background:color-mix(in srgb,var(--accent) 40%,transparent);color:inherit;border-radius:3px;padding:0 1px}
+.hcard .hm{display:flex;gap:.35rem;margin-top:.5rem}
+.hcard .hm .tile{width:54px;aspect-ratio:1;border-radius:8px}
+.ggrid{display:grid;gap:.5rem;grid-template-columns:repeat(auto-fill,minmax(110px,1fr))}
+.ggrid .tile .badge{background:rgba(0,0,0,.7)}
+.empty-state{text-align:center;color:var(--dim);padding:2.5rem 1rem}
+.empty-state .big{font-size:2.4rem}
+
+/* ── lightbox / toasts ── */
+#lightbox{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.92);display:none;flex-direction:column}
+#lightbox.open{display:flex}
+#lightbox .lb-top,#lightbox .lb-bot{display:flex;align-items:center;justify-content:space-between;gap:.5rem;padding:.7rem 1rem;color:#fff;padding-top:calc(.7rem + env(safe-area-inset-top))}
+#lightbox .lb-bot{padding-top:.7rem;padding-bottom:calc(.7rem + env(safe-area-inset-bottom));justify-content:center;gap:1rem}
+#lightbox .lb-stage{flex:1;min-height:0;display:grid;place-items:center;position:relative;touch-action:pan-y}
+#lightbox img,#lightbox video{max-width:100%;max-height:100%;object-fit:contain}
+#lightbox .lb-btn{background:rgba(255,255,255,.14);border:0;color:#fff;border-radius:10px;min-width:44px;height:44px;font-size:1.2rem;padding:0 .8rem}
+#lightbox .lb-nav{position:absolute;top:50%;transform:translateY(-50%)}
+#lightbox .lb-prev{left:.6rem}#lightbox .lb-next{right:.6rem}
+#lightbox .lb-msg{color:#fff;text-align:center;font-size:.9rem}
+#toasts{position:fixed;z-index:120;left:0;right:0;bottom:calc(5.2rem + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:.5rem;pointer-events:none;padding:0 1rem}
+@media (min-width:760px){#toasts{bottom:1.5rem}}
+.toast{pointer-events:auto;background:var(--panel);color:var(--text);border:1px solid var(--accent);border-radius:12px;padding:.65rem .9rem;box-shadow:var(--shadow);font-size:.88rem;display:flex;gap:.8rem;align-items:center;max-width:min(92vw,520px);animation:fade .2s}
+.toast button{background:none;border:0;color:var(--accent);font-weight:800}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.only-wide{display:none}
+@media (min-width:900px){.only-wide{display:inline}}
+
+</style>
+</head>
+<body>
+<div class="shell">
+  <nav class="rail" aria-label="Secciones">
+    <div class="brand"><span class="brand-ico">📔</span><span>Diario<br>de Vida</span></div>
+    <button class="navbtn active" data-view="yo"><span class="ni">🧙</span><span class="nl">YO</span></button>
+    <button class="navbtn" data-view="diario"><span class="ni">📔</span><span class="nl">DIARIO</span></button>
+    <button class="navbtn" data-view="historial"><span class="ni">🗂️</span><span class="nl">HISTORIAL</span></button>
+    <button class="navbtn" data-view="config"><span class="ni">⚙️</span><span class="nl">AJUSTES</span></button>
+  </nav>
+
+  <div class="main-col">
+    <header class="topbar">
+      <div><h1 id="topTitle">Diario de Vida</h1><div class="sub" id="topSub"></div></div>
+      <button class="chip" id="syncChip" data-s="local" title="Estado de sincronización"><span class="dot"></span><span id="syncText">Solo local</span></button>
+    </header>
+    <div class="banner" id="banner" hidden></div>
+
+    <main>
+      <!-- ═════ YO ═════ -->
+      <section class="view active" id="view-yo">
+        <div class="yo-grid">
+          <div class="card" id="yoHero"></div>
+          <div class="card"><h2>Misiones de hoy</h2><div id="yoQuests"></div></div>
+          <div class="card"><h2>Pastilla · últimos 7 días</h2><div class="muted sm">Toca un día para marcarlo o desmarcarlo.</div><div class="week" id="yoWeek"></div><div class="muted sm" id="yoPillStreak" style="margin-top:.7rem"></div></div>
+          <div class="card"><h2>Atributos</h2><div id="yoAttrs"></div></div>
+          <div class="card span2"><h2>Mapa de constancia</h2><div class="heat" id="yoHeat"></div><div class="heat-leg"><span><i></i>nada</span><span><i style="background:color-mix(in srgb,var(--accent) 28%,var(--panel2))"></i>pastilla o ánimo</span><span><i style="background:color-mix(in srgb,var(--accent) 60%,var(--panel2))"></i>texto</span><span><i style="background:var(--accent)"></i>texto + foto/video</span><span>● verde = pastilla tomada</span></div></div>
+          <div class="card" id="yoMemCard" hidden><h2>Hace un tiempo, hoy</h2><div id="yoMem"></div></div>
+          <div class="card wide"><h2>Logros</h2><div class="ach" id="yoAch"></div></div>
+        </div>
+      </section>
+
+      <!-- ═════ DIARIO ═════ -->
+      <section class="view" id="view-diario">
+        <div class="diario-grid">
+          <div class="cal-col" id="calCol">
+            <div class="card">
+              <div class="cal-head">
+                <button class="ib" id="calPrev" aria-label="Mes anterior">‹</button>
+                <button class="cal-title" id="calTitle" title="Ir a hoy"></button>
+                <button class="ib" id="calNext" aria-label="Mes siguiente">›</button>
+              </div>
+              <div class="cal-grid" id="calGrid"></div>
+              <div class="cal-sum muted" id="calSum"></div>
+            </div>
+          </div>
+          <div class="ed-col">
+            <div class="card" id="edCard">
+              <div class="ed-head">
+                <button class="ib" id="dayPrev" aria-label="Día anterior">‹</button>
+                <div class="ed-date"><b id="edDate"></b><span class="muted sm" id="edSub"></span></div>
+                <button class="ib" id="dayNext" aria-label="Día siguiente">›</button>
+                <button class="btn sm" id="dayToday">Hoy</button>
+                <button class="btn sm only-small" id="calToggle" aria-label="Mostrar calendario">📅</button>
+              </div>
+              <div class="mood-row" id="moodRow" role="radiogroup" aria-label="Ánimo del día">
+                <span class="muted">Ánimo</span>
+                <button role="radio" data-m="1" aria-label="Muy mal" aria-checked="false">😞</button>
+                <button role="radio" data-m="2" aria-label="Mal" aria-checked="false">😕</button>
+                <button role="radio" data-m="3" aria-label="Normal" aria-checked="false">😐</button>
+                <button role="radio" data-m="4" aria-label="Bien" aria-checked="false">🙂</button>
+                <button role="radio" data-m="5" aria-label="Muy bien" aria-checked="false">😄</button>
+              </div>
+              <textarea id="edText" placeholder="¿Qué pasó hoy?" spellcheck="true" aria-label="Texto de la entrada"></textarea>
+              <div class="ed-meta"><span id="wordCount"></span><span id="saveState"></span></div>
+              <div class="media-bar">
+                <label class="btn" for="fileAny">📷 Foto o video</label>
+                <input id="fileAny" type="file" accept="image/*,video/*" multiple hidden>
+                <label class="btn only-touch" for="fileCam">📸 Cámara</label>
+                <input id="fileCam" type="file" accept="image/*" capture="environment" hidden>
+              </div>
+              <div class="gallery" id="gallery"></div>
+              <button class="pill-toggle" id="pillBtn" aria-pressed="false">
+                <span class="pi">💊</span>
+                <span class="pt">Pastilla de este día<small id="pillSub">Pendiente</small></span>
+                <span class="pc">✓</span>
+              </button>
+              <div class="actions">
+                <button class="btn primary" id="saveBtn">Guardar y sincronizar</button>
+                <span class="muted sm only-wide">Ctrl+S guardar · Alt+←/→ cambiar de día</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ═════ HISTORIAL ═════ -->
+      <section class="view" id="view-historial">
+        <div class="hist-bar">
+          <input type="search" id="histQ" placeholder="Buscar en tus entradas…" aria-label="Buscar">
+          <div class="seg" id="histFilter" role="group" aria-label="Filtro">
+            <button data-f="all" aria-pressed="true">Todo</button>
+            <button data-f="text" aria-pressed="false">Con texto</button>
+            <button data-f="media" aria-pressed="false">Con fotos/videos</button>
+          </div>
+          <div class="seg" id="histMode" role="group" aria-label="Vista">
+            <button data-m="list" aria-pressed="true">Entradas</button>
+            <button data-m="gallery" aria-pressed="false">Galería</button>
+          </div>
+        </div>
+        <div id="histBody"></div>
+        <div style="text-align:center;margin-top:1rem"><button class="btn" id="histMore" hidden>Cargar más</button></div>
+      </section>
+
+      <!-- ═════ AJUSTES ═════ -->
+      <section class="view" id="view-config">
+        <div class="yo-grid">
+          <div class="card">
+            <h2>Apariencia</h2>
+            <div class="row"><div><div class="lbl">Modo</div><div class="desc">Automático sigue el modo de tu dispositivo.</div></div>
+              <div class="seg" id="cfgMode"><button data-v="auto">Auto</button><button data-v="light">Claro</button><button data-v="dark">Oscuro</button></div></div>
+            <div class="row"><div class="lbl">Tema</div>
+              <div class="swatches" id="cfgAccent">
+                <button class="swatch" data-v="dorado" style="background:#e0aa4a" aria-label="Dorado"></button>
+                <button class="swatch" data-v="arcano" style="background:#a98bf0" aria-label="Arcano"></button>
+                <button class="swatch" data-v="bosque" style="background:#6fcf8a" aria-label="Bosque"></button>
+                <button class="swatch" data-v="sakura" style="background:#f08fb6" aria-label="Sakura"></button>
+              </div></div>
+            <div class="row"><div class="lbl">Tamaño de letra</div>
+              <div class="seg" id="cfgFont"><button data-v="0.9">A−</button><button data-v="1">A</button><button data-v="1.12">A+</button><button data-v="1.25">A++</button></div></div>
+            <div class="row col"><div class="lbl">Tu nombre (para la hoja de personaje)</div><input type="text" id="cfgName" maxlength="30" autocomplete="off"></div>
+          </div>
+
+          <div class="card">
+            <h2>Recordatorio de pastilla</h2>
+            <div class="row"><div><div class="lbl">Avisarme si no la he marcado</div><div class="desc">Aparece un aviso dentro de la app a partir de la hora elegida.</div></div><button class="switch" id="cfgRemOn" role="switch" aria-checked="true" aria-label="Recordatorio"></button></div>
+            <div class="row"><div class="lbl">Hora</div><div style="width:120px"><select id="cfgRemHour" aria-label="Hora del recordatorio"></select></div></div>
+            <div class="row"><div><div class="lbl">Notificaciones del navegador</div><div class="desc" id="cfgNotifDesc">Solo suenan con la app abierta. Para un aviso con la app cerrada, usa el correo del paso opcional de LEEME.md.</div></div><button class="btn sm" id="cfgNotif">Activar</button></div>
+          </div>
+
+          <div class="card span2">
+            <h2>Sincronización (PC · teléfono · tablet)</h2>
+            <details>
+              <summary>¿Cómo conecto mis dispositivos?</summary>
+              <ol>
+                <li>Crea un proyecto en <b>script.google.com</b> y pega <code>Code.gs</code>.</li>
+                <li>Ejecuta <code>setup</code> (acepta los permisos). En el registro aparece tu <b>CLAVE</b>.</li>
+                <li><b>Implementar → Nueva implementación → Aplicación web</b>: ejecutar como <i>Yo</i>, acceso <i>Cualquier persona</i>. Copia la URL que termina en <code>/exec</code>.</li>
+                <li>Pega aquí la URL y la clave, toca <b>Probar conexión</b>. Repite en cada dispositivo.</li>
+              </ol>
+            </details>
+            <div class="row col"><div class="lbl">URL de la aplicación web</div><input type="url" id="cfgApiUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false"></div>
+            <div class="row col"><div class="lbl">Clave</div>
+              <div style="display:flex;gap:.5rem"><input type="password" id="cfgApiKey" autocomplete="off" spellcheck="false" placeholder="La que mostró setup()"><button class="btn" id="cfgKeyShow" type="button">Ver</button></div></div>
+            <div class="row"><div><div class="lbl">Sincronizar automáticamente</div><div class="desc">Al escribir, al abrir la app y al volver la conexión.</div></div><button class="switch" id="cfgAuto" role="switch" aria-checked="true" aria-label="Sincronización automática"></button></div>
+            <div class="actions"><button class="btn" id="cfgTest">Probar conexión</button><button class="btn primary" id="cfgSyncNow">Sincronizar ahora</button><button class="btn sm" id="cfgFull">Forzar descarga completa</button></div>
+            <div class="muted sm" id="cfgSyncInfo" style="margin-top:.7rem"></div>
+          </div>
+
+          <div class="card wide">
+            <h2>Datos y respaldo</h2>
+            <div class="row"><div><div class="lbl">Espacio en este dispositivo</div><div class="desc" id="cfgStorage">—</div></div><button class="btn sm" id="cfgPersist">Proteger de borrado</button></div>
+            <div class="row"><div><div class="lbl">Exportar todo</div><div class="desc">Un .zip con tus textos (entries.json) y tus fotos/videos en carpetas. Se puede abrir en cualquier computador.</div></div><button class="btn" id="cfgExport">Exportar .zip</button></div>
+            <div class="row"><div><div class="lbl">Importar</div><div class="desc">Acepta el .zip de esta versión y los .json de la versión anterior. Se combina con lo que ya tienes.</div></div><label class="btn" for="cfgImportFile">Importar…</label><input type="file" id="cfgImportFile" accept=".zip,.json,application/zip,application/json" hidden></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div id="lightbox" role="dialog" aria-modal="true" aria-label="Visor">
+  <div class="lb-top"><span id="lbTitle" class="sm"></span><button class="lb-btn" id="lbClose" aria-label="Cerrar">✕</button></div>
+  <div class="lb-stage" id="lbStage"></div>
+  <div class="lb-bot"><button class="lb-btn" id="lbSave" title="Descargar">⬇ Descargar</button><button class="lb-btn" id="lbDel" title="Quitar de la entrada">🗑 Quitar</button></div>
+</div>
+<div id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ═══════════════ utilidades ═══════════════ */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const pad = n => String(n).padStart(2, '0');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function debounce(fn, ms) {
+  let t = null, args = [];
+  const d = (...a) => { args = a; clearTimeout(t); t = setTimeout(() => { t = null; fn(...args); }, ms); };
+  d.flush = () => { if (t) { clearTimeout(t); t = null; fn(...args); } };
+  return d;
+}
+
+const keyOf = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const parseKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const dayNum = k => { const [y, m, d] = k.split('-').map(Number); return Math.round(Date.UTC(y, m - 1, d) / 864e5); };
+const todayKey = () => keyOf(new Date());
+const addDays = (k, n) => { const d = parseKey(k); d.setDate(d.getDate() + n); return keyOf(d); };
+const cap1 = t => t.charAt(0).toUpperCase() + t.slice(1);
+const fmtLong = k => cap1(parseKey(k).toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }));
+const fmtShort = k => cap1(parseKey(k).toLocaleDateString('es-CL', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }));
+const fmtMonth = (y, m) => cap1(new Date(y, m, 1).toLocaleDateString('es-CL', { month: 'long', year: 'numeric' }));
+const DOW = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+const fmtBytes = n => n < 1024 ? n + ' B' : n < 1048576 ? (n / 1024).toFixed(0) + ' KB' : n < 1073741824 ? (n / 1048576).toFixed(1) + ' MB' : (n / 1073741824).toFixed(2) + ' GB';
+const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const words = s => (String(s).trim().match(/\S+/g) || []).length;
+const MAX_TEXTO = 45000;
+
+async function blobToB64(blob) {
+  const buf = new Uint8Array(await blob.arrayBuffer());
+  let s = '';
+  for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  return btoa(s);
+}
+function b64ToBytes(b64) {
+  const s = atob(b64), u = new Uint8Array(s.length);
+  for (let i = 0; i < s.length; i++) u[i] = s.charCodeAt(i);
+  return u;
+}
+
+/* ═══════════════ base de datos local (IndexedDB) ═══════════════
+ * entries: fecha → entrada (solo datos, liviana)
+ * blobs:   id    → Blob (fotos/videos)
+ * meta:    config, sync…
+ * Se mantiene el nombre de la versión anterior para migrar sus datos.
+ */
+const DB_NAME = 'diario_vida_db', DB_VER = 2;
+let dbp = null;
+const idb = () => dbp || (dbp = new Promise((res, rej) => {
+  const r = indexedDB.open(DB_NAME, DB_VER);
+  r.onupgradeneeded = () => { const db = r.result; ['entries', 'meta', 'blobs'].forEach(n => { if (!db.objectStoreNames.contains(n)) db.createObjectStore(n); }); };
+  r.onsuccess = () => res(r.result);
+  r.onerror = () => rej(r.error);
+}));
+const reqP = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+async function dbGet(s, k) { const db = await idb(); return reqP(db.transaction(s).objectStore(s).get(k)); }
+async function dbAll(s) { const db = await idb(); return reqP(db.transaction(s).objectStore(s).getAll()); }
+async function dbHas(s, k) { const db = await idb(); return (await reqP(db.transaction(s).objectStore(s).count(k))) > 0; }
+function dbPut(s, k, v) {
+  return idb().then(db => new Promise((res, rej) => {
+    const t = db.transaction(s, 'readwrite'); t.objectStore(s).put(v, k);
+    t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  }));
+}
+function dbDel(s, k) {
+  return idb().then(db => new Promise((res, rej) => {
+    const t = db.transaction(s, 'readwrite'); t.objectStore(s).delete(k);
+    t.oncomplete = () => res(); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error);
+  }));
+}
+
+/* ═══════════════ estado ═══════════════ */
+const DEF_CFG = { mode: 'auto', accent: 'dorado', fontScale: 1, name: 'Edu', remOn: true, remHour: 21, apiUrl: '', apiKey: '', autoSync: true, device: '' };
+const S = {
+  entries: new Map(),
+  cfg: { ...DEF_CFG },
+  sync: { cursor: 0, lastOk: 0, state: 'local', err: '', up: null },
+  view: 'yo', today: todayKey(), sel: todayKey(),
+  calY: 0, calM: 0,
+  stats: null,
+  hist: { q: '', filter: 'all', mode: 'list', limit: 30 },
+  syncing: false, syncAgain: false, syncTimer: null, warnedRejected: false
+};
+{ const d = new Date(); S.calY = d.getFullYear(); S.calM = d.getMonth(); }
+
+const blankEntry = date => ({ v: 2, date, text: '', tText: 0, mood: 0, tMood: 0, pill: false, tPill: 0, media: [], dirty: false, rev: 0, baseT: 0 });
+const getE = date => S.entries.get(date) || blankEntry(date);
+const stamp = prev => Math.max(Date.now(), (prev || 0) + 1);
+const hasText = e => e.text.trim().length > 0;
+const liveMedia = e => e.media.filter(m => !m.deleted);
+const hasMedia = e => liveMedia(e).length > 0;
+const isWritten = e => hasText(e) || hasMedia(e);
+
+/* ═══════════════ fusión (misma lógica que el servidor) ═══════════════ */
+function mergeMedia(x, y) {
+  const m = new Map();
+  for (const it of [...x, ...y]) {
+    const p = m.get(it.id);
+    if (!p) m.set(it.id, { ...it });
+    else m.set(it.id, { ...p, ...it, deleted: !!(p.deleted || it.deleted), remoteId: p.remoteId || it.remoteId || '' });
+  }
+  return [...m.values()].sort((u, v) => ((u.at || 0) - (v.at || 0)) || (u.id < v.id ? -1 : 1));
+}
+function mergeEntry(a, b) {
+  const r = { ...a };
+  for (const [f, t] of [['text', 'tText'], ['mood', 'tMood'], ['pill', 'tPill']]) {
+    if ((b[t] || 0) > (a[t] || 0)) { r[f] = b[f]; r[t] = b[t]; }
+  }
+  r.media = mergeMedia(a.media || [], b.media || []);
+  return r;
+}
+const mediaSig = list => list.map(m => `${m.id}|${m.deleted ? 1 : 0}|${m.remoteId || ''}`).sort().join(',');
+const sameAsRemote = (m, r) => m.text === r.text && m.tText === r.tText && m.mood === r.mood && m.tMood === r.tMood &&
+  m.pill === r.pill && m.tPill === r.tPill && mediaSig(m.media) === mediaSig(r.media || []);
+const cleanMedia = m => ({ id: m.id, type: m.type, mime: m.mime || '', name: m.name || '', size: m.size || 0, at: m.at || 0, remoteId: m.remoteId || '', deleted: !!m.deleted });
+const wireEntry = e => ({ date: e.date, text: e.text, tText: e.tText, mood: e.mood, tMood: e.tMood, pill: e.pill, tPill: e.tPill, media: e.media.map(cleanMedia), baseT: e.baseT || 0 });
+const fromWire = r => ({ ...blankEntry(r.date), text: r.text || '', tText: r.tText || 0, mood: r.mood || 0, tMood: r.tMood || 0, pill: !!r.pill, tPill: r.tPill || 0, media: (r.media || []).map(m => ({ ...m })) });
+
+/* ═══════════════ estadísticas / RPG ═══════════════ */
+const TITLES = ['Aprendiz', 'Cronista', 'Escriba', 'Bardo', 'Archivista', 'Sabio', 'Oráculo', 'Gran Maestro'];
+const xpForLevel = L => 25 * L * (L - 1);
+function streakEnding(set, today) {
+  let k = set.has(today) ? today : addDays(today, -1), n = 0;
+  while (set.has(k)) { n++; k = addDays(k, -1); }
+  return n;
+}
+function bestStreak(sorted) {
+  let best = 0, run = 0, prev = null;
+  for (const k of sorted) { run = (prev && dayNum(k) - dayNum(prev) === 1) ? run + 1 : 1; if (run > best) best = run; prev = k; }
+  return best;
+}
+function computeStats(entries, today) {
+  const list = [...entries.values()];
+  const written = list.filter(isWritten).map(e => e.date).sort();
+  const pills = list.filter(e => e.pill).map(e => e.date).sort();
+  const wSet = new Set(written), pSet = new Set(pills);
+  let xp = 0, totalWords = 0, mediaCount = 0;
+  for (const e of list) {
+    if (hasText(e)) { const w = words(e.text); totalWords += w; xp += 10 + Math.min(10, Math.floor(w / 20)); }
+    const mc = liveMedia(e).length; mediaCount += mc; if (mc) xp += 5;
+    if (e.pill) xp += 5;
+    if (e.mood) xp += 1;
+  }
+  const level = Math.floor((25 + Math.sqrt(625 + 100 * xp)) / 50);
+  const first = [...written, ...pills].sort()[0] || null;
+  const win = first ? Math.max(1, Math.min(30, dayNum(today) - dayNum(first) + 1)) : 30;
+  const inWin = (k, n) => { const d = dayNum(today) - dayNum(k); return d >= 0 && d < n; };
+  const vit = pills.filter(k => inWin(k, win)).length / win;
+  const cons = written.filter(k => inWin(k, win)).length / win;
+  const moods = list.filter(e => e.mood && inWin(e.date, 14)).map(e => e.mood);
+  const mood = moods.length ? (moods.reduce((a, b) => a + b, 0) / moods.length - 1) / 4 : null;
+  const entriesCount = list.filter(hasText).length;
+  const st = {
+    xp, level, title: TITLES[Math.min(level - 1, TITLES.length - 1)], into: xp - xpForLevel(level), need: xpForLevel(level + 1) - xpForLevel(level),
+    entriesCount, daysWritten: written.length, totalWords, mediaCount,
+    streakW: streakEnding(wSet, today), streakP: streakEnding(pSet, today), bestW: bestStreak(written), bestP: bestStreak(pills),
+    vit, cons, mood, first, spanDays: first ? dayNum(today) - dayNum(first) + 1 : 0
+  };
+  st.ach = ACHIEVEMENTS.map(a => ({ ...a, on: a.test(st) }));
+  return st;
+}
+const ACHIEVEMENTS = [
+  { i: '🌱', t: 'Primera página', d: 'Escribe tu primera entrada', test: s => s.entriesCount >= 1 },
+  { i: '🔥', t: 'Racha de 7', d: '7 días seguidos escribiendo', test: s => s.bestW >= 7 },
+  { i: '🌋', t: 'Racha de 30', d: '30 días seguidos escribiendo', test: s => s.bestW >= 30 },
+  { i: '📚', t: '10 entradas', d: 'Diez días con texto', test: s => s.entriesCount >= 10 },
+  { i: '🏛️', t: '50 entradas', d: 'Cincuenta días con texto', test: s => s.entriesCount >= 50 },
+  { i: '👑', t: '100 entradas', d: 'Cien días con texto', test: s => s.entriesCount >= 100 },
+  { i: '📷', t: 'Primer recuerdo', d: 'Agrega tu primera foto o video', test: s => s.mediaCount >= 1 },
+  { i: '🖼️', t: 'Coleccionista', d: '25 fotos o videos', test: s => s.mediaCount >= 25 },
+  { i: '💊', t: 'Semana al día', d: '7 días seguidos con pastilla', test: s => s.bestP >= 7 },
+  { i: '🛡️', t: 'Mes de hierro', d: '30 días seguidos con pastilla', test: s => s.bestP >= 30 },
+  { i: '🏆', t: 'Centurión', d: '100 días seguidos con pastilla', test: s => s.bestP >= 100 },
+  { i: '✍️', t: '1.000 palabras', d: 'Suma 1.000 palabras escritas', test: s => s.totalWords >= 1000 },
+  { i: '🗓️', t: 'Un año de viaje', d: 'Un año desde tu primer registro', test: s => s.spanDays >= 365 }
+];
+
+/* ═══════════════ persistencia y cambios ═══════════════ */
+const saveCfg = () => dbPut('meta', 'config', S.cfg);
+const saveSyncMeta = () => dbPut('meta', 'sync', { cursor: S.sync.cursor, lastOk: S.sync.lastOk });
+
+function onStorageError(err) {
+  toast(err && err.name === 'QuotaExceededError'
+    ? 'No hay espacio en este dispositivo. Exporta tu diario y libera espacio.'
+    : 'No se pudo guardar en este dispositivo.');
+}
+
+async function commit(e, quiet = false) {
+  e.dirty = true; e.rev = (e.rev || 0) + 1;
+  S.entries.set(e.date, e);
+  try { await dbPut('entries', e.date, e); } catch (err) { onStorageError(err); throw err; }
+  refreshDerived();
+  if (!quiet) scheduleSync();
+}
+async function setText(date, text) { const e = getE(date); if (e.text === text) return; e.text = text; e.tText = stamp(e.tText); await commit(e); }
+async function setMood(date, m) { const e = getE(date); if (e.mood === m) return; e.mood = m; e.tMood = stamp(e.tMood); await commit(e); }
+async function setPill(date, v) { const e = getE(date); if (e.pill === v) return; e.pill = v; e.tPill = stamp(e.tPill); await commit(e); }
+async function removeMedia(date, id) {
+  const e = getE(date), m = e.media.find(x => x.id === id);
+  if (!m || m.deleted) return;
+  m.deleted = true;
+  await dbDel('blobs', id).catch(() => {});
+  await commit(e);
+}
+
+/* ═══════════════ fotos y videos ═══════════════ */
+async function resizeImage(file, max = 1920, q = 0.82) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('formato no compatible')); i.src = url; });
+    let w = img.naturalWidth || img.width, h = img.naturalHeight || img.height;
+    const sc = Math.min(1, max / Math.max(w, h)); w = Math.max(1, Math.round(w * sc)); h = Math.max(1, Math.round(h * sc));
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); ctx.drawImage(img, 0, 0, w, h);
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', q));
+    if (!blob) throw new Error('no se pudo convertir');
+    return { blob, w, h };
+  } finally { URL.revokeObjectURL(url); }
+}
+async function prepareMedia(f) {
+  const isVideo = (f.type || '').startsWith('video/') || /\.(mp4|mov|m4v|webm|3gp|mkv)$/i.test(f.name || '');
+  if (isVideo) {
+    if (f.size > 500 * 1048576 && !confirm(`«${f.name}» pesa ${fmtBytes(f.size)}. Ocupará espacio en este dispositivo y en tu Drive. ¿Agregarlo igual?`)) return null;
+    return { type: 'video', blob: f, mime: f.type || 'video/mp4', name: f.name || 'video' };
+  }
+  const { blob } = await resizeImage(f);
+  return { type: 'image', blob, mime: 'image/jpeg', name: (f.name || 'foto').replace(/\.[^.]+$/, '') + '.jpg' };
+}
+async function addFiles(date, files) {
+  files = Array.from(files || []);
+  if (!files.length) return;
+  const e = getE(date); let added = 0;
+  for (const f of files) {
+    try {
+      const it = await prepareMedia(f);
+      if (!it) continue;
+      const id = uid();
+      await dbPut('blobs', id, it.blob);
+      e.media.push({ id, type: it.type, mime: it.mime, name: it.name, size: it.blob.size, at: Date.now() + added, remoteId: '' });
+      added++;
+    } catch (err) {
+      if (err && err.name === 'QuotaExceededError') { onStorageError(err); break; }
+      toast(`No pude agregar «${f.name || 'archivo'}»: ${err.message}`);
+    }
+  }
+  if (added) {
+    await commit(e);
+    if (S.sel === date) renderGallery();
+    toast(added === 1 ? 'Agregado ✓' : `${added} archivos agregados ✓`);
+  }
+}
+
+const getBlob = id => dbGet('blobs', id);
+S.dlProg = new Map();
+function setProg(id, f) {
+  if (f == null) S.dlProg.delete(id); else S.dlProg.set(id, f);
+  $$(`[data-id="${id}"] .prog`).forEach(el => { el.style.width = (f == null ? 0 : f * 100) + '%'; });
+}
+const dlInflight = new Map(), dlWait = []; let dlRunning = 0;
+function ensureBlob(item) {
+  if (dlInflight.has(item.id)) return dlInflight.get(item.id);
+  const p = new Promise((res, rej) => { dlWait.push({ item, res, rej }); pumpDownloads(); });
+  dlInflight.set(item.id, p);
+  p.finally(() => dlInflight.delete(item.id)).catch(() => {});
+  return p;
+}
+function pumpDownloads() {
+  while (dlRunning < 2 && dlWait.length) {
+    const j = dlWait.shift(); dlRunning++;
+    downloadBlob(j.item).then(j.res, j.rej).finally(() => { dlRunning--; pumpDownloads(); });
+  }
+}
+async function downloadBlob(item) {
+  const have = await getBlob(item.id);
+  if (have) return have;
+  if (!item.remoteId) throw new Error('Aún no se ha subido desde el otro dispositivo');
+  if (!configured()) throw new Error('Configura la sincronización para descargar este archivo');
+  const total = item.size || 0;
+  if (!total) throw new Error('Archivo sin tamaño');
+  const parts = []; let off = 0;
+  while (off < total) {
+    const j = await api('mediaGet', { fileId: item.remoteId, offset: off, length: Math.min(2097152, total - off) });
+    const bytes = b64ToBytes(j.data);
+    if (!bytes.length) throw new Error('Descarga incompleta');
+    parts.push(bytes); off += bytes.length; setProg(item.id, Math.min(1, off / total));
+  }
+  const blob = new Blob(parts, { type: item.mime || (item.type === 'video' ? 'video/mp4' : 'image/jpeg') });
+  await dbPut('blobs', item.id, blob);
+  setProg(item.id, null);
+  return blob;
+}
+
+/* ═══════════════ sincronización ═══════════════ */
+const configured = () => !!(S.cfg.apiUrl && S.cfg.apiKey);
+const ERR = {
+  clave: 'La clave no coincide con la del servidor.',
+  sin_configurar: 'Falta ejecutar setup() en Apps Script.',
+  accion: 'La URL responde, pero parece otra versión del script.',
+  sesion_expirada: 'La subida expiró; se reintentará.',
+  tamano_invalido: 'Archivo con tamaño no válido.',
+  archivo_fuera_de_carpeta: 'Ese archivo no está en la carpeta del diario.'
+};
+const errMsg = c => ERR[c] || (String(c).startsWith('drive_') ? `Google Drive rechazó la operación (${c}).` : String(c));
+
+async function api(action, body = {}, cfg = S.cfg) {
+  let r;
+  try {
+    r = await fetch(cfg.apiUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, key: cfg.apiKey, device: cfg.device, ...body }), redirect: 'follow' });
+  } catch (e) { const err = new Error('Sin conexión con el servidor'); err.offline = true; throw err; }
+  if (!r.ok) throw new Error('El servidor respondió ' + r.status);
+  let j;
+  try { j = await r.json(); } catch (e) { throw new Error('Respuesta inválida: revisa que la URL termine en /exec y que el acceso sea «Cualquier persona».'); }
+  if (!j.ok) { const err = new Error(errMsg(j.error)); err.code = j.error; throw err; }
+  return j;
+}
+
+const pendingCount = () => { let n = 0; for (const e of S.entries.values()) if (e.dirty) n++; return n; };
+function setSync(state, err = '') { S.sync.state = state; S.sync.err = err; paintSync(); }
+function scheduleSync(delay = 4000) {
+  if (!configured() || !S.cfg.autoSync) { paintSync(); return; }
+  clearTimeout(S.syncTimer); S.syncTimer = setTimeout(() => syncNow(), delay); paintSync();
+}
+
+async function syncNow(manual = false) {
+  if (!configured()) { if (manual) toast('Primero pega la URL y la clave en Ajustes.'); paintSync(); return false; }
+  if (S.syncing) { S.syncAgain = true; return false; }
+  if (navigator.onLine === false) { setSync('offline'); return false; }
+  S.syncing = true; setSync('syncing');
+  let ok = false;
+  try {
+    await uploadPending();
+    await pushDirty();
+    await pullAll();
+    S.sync.lastOk = Date.now(); await saveSyncMeta(); ok = true;
+    setSync(pendingCount() ? 'pending' : 'ok');
+  } catch (err) {
+    if (err.offline) setSync('offline');
+    else { setSync('error', err.message); if (manual) toast('Sincronización: ' + err.message); }
+  } finally {
+    S.syncing = false; S.sync.up = null;
+    if (S.syncAgain) { S.syncAgain = false; scheduleSync(600); }
+  }
+  paintSync();
+  return ok;
+}
+
+async function uploadPending() {
+  for (const date of [...S.entries.keys()].sort().reverse()) {
+    const e0 = S.entries.get(date);
+    for (const m0 of e0.media.filter(m => !m.deleted && !m.remoteId)) {
+      const blob = await getBlob(m0.id);
+      if (!blob) continue;
+      const fileId = await uploadBlob(m0, blob);
+      const e = S.entries.get(date), m = e && e.media.find(x => x.id === m0.id);
+      if (m) { m.remoteId = fileId; delete m.up; await commit(e, true); }
+    }
+  }
+}
+async function uploadBlob(m, blob) {
+  const total = blob.size, CH = 1572864;   // múltiplo de 256 KB (requisito de Drive)
+  if (!total) throw new Error('Archivo vacío');
+  let uploadId = m.up && m.up.id, off = m.up ? m.up.off : 0;
+  if (!uploadId) {
+    const r = await api('mediaInit', { name: m.name || m.id, mime: m.mime || blob.type || 'application/octet-stream', size: total });
+    uploadId = r.uploadId; off = 0;
+  }
+  for (let guard = 0; guard < Math.ceil(total / CH) + 60; guard++) {
+    const end = Math.min(off + CH, total);
+    let r;
+    try { r = await api('mediaChunk', { uploadId, offset: off, total, data: await blobToB64(blob.slice(off, end)) }); }
+    catch (err) { if (err.code === 'sesion_expirada') delete m.up; throw err; }
+    S.sync.up = { id: m.id, pct: end / total }; paintSync();
+    if (r.done) return r.fileId;
+    off = (typeof r.next === 'number' && r.next >= 0) ? r.next : end;
+    m.up = { id: uploadId, off };
+  }
+  throw new Error('La subida no avanza; se reintentará más tarde');
+}
+
+async function applyRemote(r) {
+  const cur = S.entries.get(r.date);
+  let next;
+  if (!cur) next = { ...fromWire(r), baseT: r.tText || 0, dirty: false, rev: 0 };
+  else {
+    next = mergeEntry(cur, r);
+    next.baseT = r.tText || 0;
+    next.rev = cur.rev || 0;
+    next.dirty = !sameAsRemote(next, r);
+  }
+  S.entries.set(r.date, next);
+  await dbPut('entries', r.date, next);
+}
+async function pushDirty() {
+  const dirty = [...S.entries.values()].filter(e => e.dirty).sort((a, b) => a.date < b.date ? -1 : 1);
+  const changed = new Set();
+  for (let i = 0; i < dirty.length; i += 20) {
+    const res = await api('push', { entries: dirty.slice(i, i + 20).map(wireEntry) });
+    for (const r of res.entries) { await applyRemote(r); changed.add(r.date); }
+    if (res.rejected && res.rejected.length && !S.warnedRejected) {
+      S.warnedRejected = true;
+      toast(`El día ${res.rejected[0].date} es demasiado largo para sincronizar (máx. ${MAX_TEXTO.toLocaleString('es-CL')} caracteres).`);
+    }
+  }
+  if (changed.size) afterRemote(changed);
+}
+async function pullAll() {
+  const changed = new Set();
+  for (let guard = 0; guard < 500; guard++) {
+    const res = await api('pull', { since: S.sync.cursor });
+    for (const r of res.entries) { await applyRemote(r); changed.add(r.date); }
+    if (res.entries.length) { S.sync.cursor = Math.max(S.sync.cursor, res.cursor || 0); await saveSyncMeta(); }
+    if (!res.more) break;
+  }
+  if (changed.size) afterRemote(changed);
+}
+function afterRemote(dates) {
+  refreshDerived();
+  // fotos (no videos) se bajan solas: así quedan disponibles aunque luego no haya señal
+  for (const d of dates) { const e = S.entries.get(d); if (e) for (const m of e.media) if (!m.deleted && m.type !== 'video' && m.remoteId) ensureBlob(m).catch(() => {}); }
+  if (S.view === 'diario' && dates.has(S.sel)) {
+    if (document.activeElement !== $('#edText')) loadDay(S.sel); else { renderGallery(); renderEditorMeta(); }
+  }
+}
+
+/* ═══════════════ ZIP (sin compresión) para exportar/importar ═══════════════ */
+const CRC_T = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+async function crcBlob(blob) {
+  let c = 0xFFFFFFFF;
+  for (let o = 0; o < blob.size; o += 4194304) {
+    const u = new Uint8Array(await blob.slice(o, o + 4194304).arrayBuffer());
+    for (let i = 0; i < u.length; i++) c = CRC_T[(c ^ u[i]) & 255] ^ (c >>> 8);
+  }
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+async function buildZip(files) {
+  const enc = new TextEncoder(), parts = [], central = [];
+  let offset = 0;
+  const now = new Date();
+  const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | (now.getSeconds() >> 1);
+  const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+  for (const f of files) {
+    const name = enc.encode(f.name), size = f.blob.size, crc = await crcBlob(f.blob);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true); h.setUint16(8, 0, true);
+    h.setUint16(10, dosTime, true); h.setUint16(12, dosDate, true); h.setUint32(14, crc, true);
+    h.setUint32(18, size, true); h.setUint32(22, size, true); h.setUint16(26, name.length, true); h.setUint16(28, 0, true);
+    parts.push(h.buffer, name, f.blob);
+    central.push({ name, crc, size, offset });
+    offset += 30 + name.length + size;
+    if (offset > 0xFFFF0000) throw new Error('El respaldo supera los 4 GB que admite un .zip simple');
+  }
+  const cdStart = offset;
+  for (const c of central) {
+    const h = new DataView(new ArrayBuffer(46));
+    h.setUint32(0, 0x02014b50, true); h.setUint16(4, 20, true); h.setUint16(6, 20, true); h.setUint16(8, 0x0800, true); h.setUint16(10, 0, true);
+    h.setUint16(12, dosTime, true); h.setUint16(14, dosDate, true); h.setUint32(16, c.crc, true);
+    h.setUint32(20, c.size, true); h.setUint32(24, c.size, true); h.setUint16(28, c.name.length, true);
+    h.setUint32(42, c.offset, true);
+    parts.push(h.buffer, c.name); offset += 46 + c.name.length;
+  }
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, central.length, true); e.setUint16(10, central.length, true);
+  e.setUint32(12, offset - cdStart, true); e.setUint32(16, cdStart, true);
+  parts.push(e.buffer);
+  return new Blob(parts, { type: 'application/zip' });
+}
+async function readZip(blob) {
+  const tailSize = Math.min(blob.size, 65557);
+  const tail = new DataView(await blob.slice(blob.size - tailSize).arrayBuffer());
+  let p = -1;
+  for (let i = tailSize - 22; i >= 0; i--) if (tail.getUint32(i, true) === 0x06054b50) { p = i; break; }
+  if (p < 0) throw new Error('No parece un .zip válido');
+  const count = tail.getUint16(p + 10, true), cdSize = tail.getUint32(p + 12, true), cdOff = tail.getUint32(p + 16, true);
+  const cd = new DataView(await blob.slice(cdOff, cdOff + cdSize).arrayBuffer()), dec = new TextDecoder();
+  const out = []; let o = 0;
+  for (let i = 0; i < count; i++) {
+    if (cd.getUint32(o, true) !== 0x02014b50) throw new Error('El directorio del .zip está dañado');
+    const nlen = cd.getUint16(o + 28, true), elen = cd.getUint16(o + 30, true), clen = cd.getUint16(o + 32, true);
+    out.push({ method: cd.getUint16(o + 10, true), csize: cd.getUint32(o + 20, true), loff: cd.getUint32(o + 42, true), name: dec.decode(new Uint8Array(cd.buffer, cd.byteOffset + o + 46, nlen)) });
+    o += 46 + nlen + elen + clen;
+  }
+  for (const f of out) {
+    const lh = new DataView(await blob.slice(f.loff, f.loff + 30).arrayBuffer());
+    const start = f.loff + 30 + lh.getUint16(26, true) + lh.getUint16(28, true);
+    let data = blob.slice(start, start + f.csize);
+    if (f.method === 8) {
+      if (typeof DecompressionStream === 'undefined') throw new Error('Este .zip está comprimido y tu navegador no puede abrirlo');
+      data = await new Response(data.stream().pipeThrough(new DecompressionStream('deflate-raw'))).blob();
+    } else if (f.method !== 0) throw new Error('Método de compresión no soportado');
+    f.blob = data;
+  }
+  return out;
+}
+const extOf = (mime, name) => ({ 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp', 'video/mp4': 'mp4', 'video/quicktime': 'mov', 'video/webm': 'webm', 'video/3gpp': '3gp', 'video/x-matroska': 'mkv' }[mime]) || ((String(name || '').match(/\.([a-z0-9]{2,4})$/i) || [])[1] || 'bin').toLowerCase();
+function saveAs(blob, name) {
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+}
+async function exportAll() {
+  const files = [], entries = []; let noLocal = 0;
+  for (const e of [...S.entries.values()].sort((a, b) => a.date < b.date ? -1 : 1)) {
+    if (!isWritten(e) && !e.pill && !e.mood) continue;
+    const media = []; let i = 0;
+    for (const m of liveMedia(e)) {
+      i++;
+      const item = { ...cleanMedia(m) }, blob = await getBlob(m.id);
+      if (blob) { item.file = `media/${e.date}_${i}.${extOf(m.mime, m.name)}`; files.push({ name: item.file, blob }); } else noLocal++;
+      media.push(item);
+    }
+    entries.push({ date: e.date, text: e.text, tText: e.tText, mood: e.mood, tMood: e.tMood, pill: e.pill, tPill: e.tPill, media });
+  }
+  const json = new Blob([JSON.stringify({ format: 'diario-vida', version: 2, exportedAt: new Date().toISOString(), entries }, null, 1)], { type: 'application/json' });
+  files.unshift({ name: 'entries.json', blob: json });
+  return { zip: await buildZip(files), count: entries.length, noLocal };
+}
+function dataUrlToBlob(u) {
+  const m = /^data:([^;,]*)(;base64)?,(.*)$/s.exec(u || '');
+  if (!m) return null;
+  return new Blob([m[2] ? b64ToBytes(m[3]) : new TextEncoder().encode(decodeURIComponent(m[3]))], { type: m[1] || 'application/octet-stream' });
+}
+function legacyToEntries(data) {   // formato de la versión anterior: { entries: { 'YYYY-MM-DD': { text, pill, media:[{type,dataUrl}] } } }
+  const out = [];
+  for (const [date, x] of Object.entries(data.entries || {})) {
+    if (!x) continue;
+    const urls = (x.media || []).map(m => ({ type: m.type, dataUrl: m.dataUrl })).concat((x.images || []).map(u => ({ type: 'image', dataUrl: u })), x.image ? [{ type: 'image', dataUrl: x.image }] : []);
+    out.push({ date, text: x.text || '', pill: !!x.pill, media: urls.map(u => ({ type: u.type === 'video' ? 'video' : 'image', blob: dataUrlToBlob(u.dataUrl) })) });
+  }
+  return out;
+}
+async function importFile(file) {
+  let list, blobs = new Map();
+  const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
+  if (head[0] === 0x50 && head[1] === 0x4b) {
+    const files = await readZip(file), jf = files.find(f => f.name === 'entries.json');
+    if (!jf) throw new Error('El .zip no trae entries.json');
+    list = JSON.parse(await jf.blob.text()).entries || [];
+    for (const f of files) if (f.name.startsWith('media/')) blobs.set(f.name, f.blob);
+  } else list = legacyToEntries(JSON.parse(await file.text()));
+  let nE = 0, nM = 0, missing = 0;
+  for (const x of list) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(x.date || '')) continue;
+    const cur = getE(x.date), media = [];
+    for (const m of (x.media || [])) {
+      if (m.deleted) continue;
+      if (m.id && cur.media.some(y => y.id === m.id)) continue;
+      const blob = m.file ? blobs.get(m.file) : m.blob;
+      if (!blob) { missing++; continue; }
+      const id = m.id || uid();
+      await dbPut('blobs', id, blob);
+      media.push({ id, type: m.type === 'video' ? 'video' : 'image', mime: m.mime || blob.type || '', name: m.name || '', size: blob.size, at: m.at || Date.now() + nM, remoteId: m.remoteId || '' });
+      nM++;
+    }
+    const remote = { date: x.date, text: x.text || '', tText: x.tText ?? (x.text ? 1 : 0), mood: x.mood || 0, tMood: x.tMood ?? (x.mood ? 1 : 0), pill: !!x.pill, tPill: x.tPill ?? (x.pill ? 1 : 0), media };
+    const merged = mergeEntry(cur, remote);
+    merged.dirty = true; merged.rev = (cur.rev || 0) + 1;
+    S.entries.set(x.date, merged);
+    await dbPut('entries', x.date, merged);
+    nE++;
+  }
+  refreshDerived();
+  if (S.view === 'diario') loadDay(S.sel);
+  scheduleSync(1500);
+  return { nE, nM, missing };
+}
+
+/* ═══════════════ interfaz: base ═══════════════ */
+const keyFromNum = n => { const d = new Date(n * 864e5); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
+const plural = (n, s, p) => n === 1 ? s : p;
+const MOODS = ['', '😞', '😕', '😐', '🙂', '😄'];
+
+function toast(msg, action) {
+  const box = $('#toasts'), t = document.createElement('div');
+  t.className = 'toast';
+  const s = document.createElement('span'); s.textContent = msg; t.append(s);
+  if (action) { const b = document.createElement('button'); b.textContent = action.label; b.onclick = () => { action.fn(); t.remove(); }; t.append(b); }
+  box.append(t);
+  setTimeout(() => t.remove(), action ? 7000 : 3800);
+}
+
+const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+function applyTheme() {
+  const dark = S.cfg.mode === 'auto' ? (mq ? mq.matches : true) : S.cfg.mode === 'dark';
+  const h = document.documentElement;
+  h.dataset.theme = dark ? 'dark' : 'light'; h.dataset.accent = S.cfg.accent;
+  h.style.fontSize = (16 * (S.cfg.fontScale || 1)) + 'px';
+  const tc = $('meta[name=theme-color]'); if (tc) tc.content = dark ? '#0f1117' : '#f1ead9';
+}
+
+function paintSync() {
+  const chip = $('#syncChip'), n = pendingCount();
+  let s, t;
+  if (!configured()) { s = 'local'; t = 'Solo local'; }
+  else if (S.sync.state === 'syncing') { s = 'syncing'; t = S.sync.up ? `Subiendo ${Math.round(S.sync.up.pct * 100)}%` : 'Sincronizando…'; }
+  else if (S.sync.state === 'offline') { s = 'offline'; t = n ? `Sin conexión · ${n} ${plural(n, 'pendiente', 'pendientes')}` : 'Sin conexión'; }
+  else if (S.sync.state === 'error') { s = 'error'; t = 'Error de sincronización'; }
+  else if (n) { s = 'pending'; t = `${n} por sincronizar`; }
+  else { s = 'ok'; t = S.sync.lastOk ? 'Al día' : 'Conectado'; }
+  chip.dataset.s = s; $('#syncText').textContent = t;
+  chip.title = S.sync.err || (S.sync.lastOk ? 'Última sincronización: ' + new Date(S.sync.lastOk).toLocaleString('es-CL') : 'Toca para sincronizar o configurar');
+  if (S.view === 'config') renderSyncInfo();
+  if (S.view === 'diario') renderSaveState();
+}
+
+function refreshDerived() { S.stats = computeStats(S.entries, S.today); renderLive(); }
+function renderLive() {
+  renderBanner(); paintSync();
+  if (S.view === 'yo') renderYo();
+  else if (S.view === 'diario') { renderCalendar(); renderEditorMeta(); }
+  else if (S.view === 'historial') renderHistorial();
+}
+
+function renderBanner() {
+  const b = $('#banner'), e = S.entries.get(S.today);
+  const show = S.cfg.remOn && new Date().getHours() >= S.cfg.remHour && !(e && e.pill);
+  if (show && b.hidden) {
+    b.hidden = false;
+    b.innerHTML = '<span>💊 Aún no marcas tu pastilla de hoy.</span><button class="btn sm primary" id="bannerPill">Ya la tomé</button>';
+    $('#bannerPill').onclick = () => setPill(S.today, true);
+  } else if (!show) b.hidden = true;
+}
+
+/* ═══════════════ YO ═══════════════ */
+function renderYo() {
+  const st = S.stats || (S.stats = computeStats(S.entries, S.today));
+  const e = S.entries.get(S.today) || blankEntry(S.today);
+  const pct = Math.min(100, Math.round(st.into / st.need * 100));
+  const nm = (S.cfg.name || '').trim();
+  $('#yoHero').innerHTML = `<div class="hero"><div class="avatar"><span>${esc((nm.charAt(0) || '?').toUpperCase())}</span></div>
+    <div><div class="title">${esc(st.title)}</div><h3>${esc(nm || 'Aventurero')}</h3><div class="muted sm">Nivel ${st.level}</div></div></div>
+    <div class="xp"><div class="xpbar"><i style="width:${pct}%"></i></div><div class="meta"><span>${st.into} / ${st.need} XP</span><span>→ Nivel ${st.level + 1}</span></div></div>
+    <div class="statrow"><div class="stat"><b>${st.entriesCount}</b><span>entradas</span></div><div class="stat"><b>${st.streakW}</b><span>racha escritura</span></div><div class="stat"><b>${st.streakP}</b><span>racha pastilla</span></div></div>`;
+
+  const quests = [
+    { a: 'pill', i: '💊', t: 'Tomar la pastilla', s: e.pill ? '¡Hecho!' : 'Toca para marcarla', x: 5, d: e.pill },
+    { a: 'write', i: '✍️', t: 'Escribir la entrada de hoy', s: hasText(e) ? '¡Hecho!' : 'Cuenta cómo va tu día', x: 10, d: hasText(e) },
+    { a: 'photo', i: '📷', t: 'Guardar un recuerdo', s: hasMedia(e) ? '¡Hecho!' : 'Una foto o video (opcional)', x: 5, d: hasMedia(e) }
+  ];
+  $('#yoQuests').innerHTML = quests.map(q => `<button class="quest${q.d ? ' done' : ''}" data-a="${q.a}"><span class="qi">${q.i}</span><span class="qt"><b>${q.t}</b><small>${q.s}</small></span><span class="qx">+${q.x} XP</span><span class="qc">✓</span></button>`).join('');
+
+  let wk = '';
+  for (let i = 6; i >= 0; i--) {
+    const k = addDays(S.today, -i), x = S.entries.get(k), on = x && x.pill;
+    wk += `<button data-d="${k}" class="${on ? 'on' : ''}${i === 0 ? ' today' : ''}" aria-pressed="${!!on}" aria-label="${esc(fmtLong(k))}: ${on ? 'pastilla tomada' : 'sin marcar'}"><span>${esc(parseKey(k).toLocaleDateString('es-CL', { weekday: 'short' }).replace('.', ''))}</span><b>${parseKey(k).getDate()}</b><span class="t">💊</span></button>`;
+  }
+  $('#yoWeek').innerHTML = wk;
+  $('#yoPillStreak').textContent = `Racha actual: ${st.streakP} ${plural(st.streakP, 'día', 'días')} · Mejor racha: ${st.bestP}`;
+
+  const bar = (lbl, val, txt) => `<div class="bar"><div class="l"><span>${lbl}</span><b>${txt}</b></div><div class="track"><i style="width:${val == null ? 0 : Math.round(val * 100)}%"></i></div></div>`;
+  $('#yoAttrs').innerHTML =
+    bar('💊 Vitalidad', st.vit, Math.round(st.vit * 100) + '%') +
+    bar('✍️ Constancia', st.cons, Math.round(st.cons * 100) + '%') +
+    bar('🙂 Ánimo', st.mood, st.mood == null ? 'sin datos' : Math.round(st.mood * 100) + '%') +
+    bar('🖼️ Memoria', Math.min(1, st.mediaCount / 50), st.mediaCount + ' ' + plural(st.mediaCount, 'recuerdo', 'recuerdos')) +
+    `<div class="muted sm" style="margin-top:.6rem">Vitalidad y constancia miden los últimos 30 días (o desde tu primer registro). Ánimo: promedio de los últimos 14.</div>`;
+
+  const weeks = 24, t = dayNum(S.today), dow = (parseKey(S.today).getDay() + 6) % 7, start = t - dow - (weeks - 1) * 7;
+  let cells = '';
+  for (let w = 0; w < weeks; w++) for (let d = 0; d < 7; d++) {
+    const n = start + w * 7 + d, k = keyFromNum(n), x = S.entries.get(k);
+    let lv = 0;
+    if (x) lv = (hasText(x) && hasMedia(x)) ? 3 : (hasText(x) || hasMedia(x)) ? 2 : (x.pill || x.mood) ? 1 : 0;
+    cells += `<div class="c${lv ? ' l' + lv : ''}${x && x.pill ? ' pill' : ''}${n > t ? ' future' : ''}" title="${esc(fmtShort(k))}"></div>`;
+  }
+  const heat = $('#yoHeat');
+  heat.innerHTML = `<div class="g">${cells}</div>`;
+  heat.scrollLeft = heat.scrollWidth;
+
+  const md = S.today.slice(5), mem = [...S.entries.values()].filter(x => x.date.slice(5) === md && x.date < S.today && isWritten(x)).sort((a, b) => a.date < b.date ? 1 : -1);
+  $('#yoMemCard').hidden = !mem.length;
+  const box = $('#yoMem'); box.textContent = '';
+  for (const x of mem.slice(0, 4)) {
+    const yrs = Number(S.today.slice(0, 4)) - Number(x.date.slice(0, 4));
+    const b = document.createElement('button'); b.className = 'mem'; b.dataset.d = x.date;
+    const h = document.createElement('b'); h.textContent = `Hace ${yrs} ${plural(yrs, 'año', 'años')} · ${fmtShort(x.date)}`;
+    const p = document.createElement('p'); p.textContent = hasText(x) ? x.text.trim() : '📷 Recuerdo con fotos o videos';
+    b.append(h, p); box.append(b);
+  }
+  $('#yoAch').innerHTML = st.ach.map(a => `<div class="${a.on ? 'on' : ''}" title="${esc(a.d)}"><div class="ai">${a.i}</div><b>${esc(a.t)}</b><small>${esc(a.d)}</small></div>`).join('');
+}
+
+/* ═══════════════ DIARIO: calendario y editor ═══════════════ */
+function renderCalendar() {
+  $('#calTitle').textContent = fmtMonth(S.calY, S.calM);
+  const g = $('#calGrid'); g.textContent = '';
+  DOW.forEach(d => { const x = document.createElement('div'); x.className = 'dow'; x.textContent = d; g.append(x); });
+  const lead = (new Date(S.calY, S.calM, 1).getDay() + 6) % 7, dim = new Date(S.calY, S.calM + 1, 0).getDate();
+  for (let i = 0; i < lead; i++) { const b = document.createElement('div'); b.className = 'day empty'; g.append(b); }
+  let wr = 0, pl = 0;
+  for (let d = 1; d <= dim; d++) {
+    const k = `${S.calY}-${pad(S.calM + 1)}-${pad(d)}`, e = S.entries.get(k);
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'day' + (k === S.today ? ' today' : '') + (k === S.sel ? ' sel' : ''); b.dataset.d = k;
+    b.setAttribute('aria-label', fmtLong(k) + (e && hasText(e) ? ', con texto' : '') + (e && hasMedia(e) ? ', con fotos o videos' : '') + (e && e.pill ? ', pastilla tomada' : ''));
+    b.innerHTML = `<span>${d}</span><span class="ind">${e && hasText(e) ? '<i></i>' : ''}${e && hasMedia(e) ? '<i class="m"></i>' : ''}${e && e.pill ? '<i class="p"></i>' : ''}</span>`;
+    g.append(b);
+    if (e && isWritten(e)) wr++;
+    if (e && e.pill) pl++;
+  }
+  $('#calSum').innerHTML = `<span>● ${wr} ${plural(wr, 'día con entrada', 'días con entrada')}</span><span>💊 ${pl} ${plural(pl, 'día', 'días')} con pastilla</span>`;
+}
+
+function renderSaveState(txt) {
+  const e = getE(S.sel), el = $('#saveState');
+  if (txt) { el.textContent = txt; return; }
+  if ($('#edText').value.length > MAX_TEXTO) el.textContent = '⚠ Demasiado largo para sincronizar';
+  else el.textContent = e.dirty ? (configured() ? '● Guardado aquí · por sincronizar' : '✓ Guardado en este dispositivo') : (configured() && S.sync.lastOk ? '✓ Sincronizado' : '✓ Guardado en este dispositivo');
+}
+function renderEditorMeta() {
+  const e = getE(S.sel), diff = dayNum(S.sel) - dayNum(S.today);
+  $('#edDate').textContent = fmtLong(S.sel);
+  $('#edSub').textContent = diff === 0 ? 'Hoy' : diff === -1 ? 'Ayer' : diff === 1 ? 'Mañana' : diff < 0 ? `Hace ${-diff} días` : `Dentro de ${diff} días`;
+  $$('#moodRow button').forEach(b => b.setAttribute('aria-checked', String(Number(b.dataset.m) === e.mood)));
+  $('#pillBtn').setAttribute('aria-pressed', String(e.pill));
+  $('#pillSub').textContent = e.pill ? 'Tomada ✓' : 'Pendiente';
+  $('#wordCount').textContent = `${words($('#edText').value)} palabras`;
+  $('#dayToday').disabled = S.sel === S.today;
+  renderSaveState();
+}
+function autoGrow(ta) { ta.style.height = 'auto'; ta.style.height = Math.max(ta.scrollHeight + 4, parseInt(getComputedStyle(ta).minHeight) || 0) + 'px'; }
+function loadDay(date) {
+  S.sel = date;
+  const d = parseKey(date); S.calY = d.getFullYear(); S.calM = d.getMonth();
+  const ta = $('#edText'); ta.value = getE(date).text; autoGrow(ta);
+  renderCalendar(); renderEditorMeta(); renderGallery();
+}
+function selectDay(date) {
+  saveDraft.flush();
+  loadDay(date);
+  $('#calCol').classList.remove('open');
+}
+
+// Un <video> desconectado del DOM sigue pidiendo su blob: hay que soltarle el src ANTES de revocar la URL
+function releaseMedia(root) {
+  if (!root) return;
+  root.querySelectorAll('video').forEach(v => { try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {} });
+}
+let galUrls = [], galGen = 0;
+function placeholder(t, msg) {
+  let ph = $('.ph', t); if (!ph) { ph = document.createElement('div'); ph.className = 'ph'; t.append(ph); }
+  ph.textContent = msg;
+}
+async function fillTile(t, m, track) {
+  const prog = document.createElement('div'); prog.className = 'prog'; t.append(prog);
+  let blob = await getBlob(m.id);
+  if (!blob && m.remoteId && m.type !== 'video' && configured()) {
+    placeholder(t, 'Descargando…');
+    try { blob = await ensureBlob(m); } catch (err) { placeholder(t, 'No se pudo descargar'); return; }
+  }
+  if (!blob) { placeholder(t, m.type === 'video' ? (m.remoteId ? `▶ Descargar (${fmtBytes(m.size || 0)})` : 'Video pendiente de subir') : (m.remoteId ? 'Conecta la sincronización' : 'Foto pendiente de subir')); return; }
+  const old = $('.ph', t); if (old) old.remove();
+  const url = URL.createObjectURL(blob);
+  if (track && track(url) === false) { URL.revokeObjectURL(url); return; }   // el render que pidió este tile ya fue reemplazado
+  let el;
+  if (m.type === 'video') {
+    el = document.createElement('video'); el.muted = true; el.playsInline = true; el.preload = 'metadata'; el.src = url + '#t=0.1';
+    const b = document.createElement('span'); b.className = 'badge'; b.textContent = '▶ video'; t.append(b);
+  } else { el = document.createElement('img'); el.src = url; el.alt = ''; el.decoding = 'async'; }
+  t.prepend(el);
+}
+function makeTile(m, { del = false, track, open } = {}) {
+  const t = document.createElement('div');
+  t.className = 'tile'; t.dataset.id = m.id; t.tabIndex = 0; t.setAttribute('role', 'button');
+  t.setAttribute('aria-label', m.type === 'video' ? 'Abrir video' : 'Abrir foto');
+  t.addEventListener('click', ev => { ev.stopPropagation(); if (open) open(); });
+  t.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); if (open) open(); } });
+  if (del) {
+    const x = document.createElement('button'); x.className = 'del'; x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Quitar de la entrada');
+    x.addEventListener('click', ev => { ev.stopPropagation(); if (confirm('¿Quitar este archivo de la entrada?')) removeMedia(S.sel, m.id).then(renderGallery); });
+    t.append(x);
+  }
+  fillTile(t, m, track);
+  return t;
+}
+function renderGallery() {
+  releaseMedia($('#gallery'));
+  galUrls.forEach(u => URL.revokeObjectURL(u)); galUrls = [];
+  const gen = ++galGen, trackG = u => { if (gen !== galGen) return false; galUrls.push(u); return true; };
+  const g = $('#gallery'); g.textContent = '';
+  liveMedia(getE(S.sel)).forEach((m, i) => g.append(makeTile(m, { del: true, track: trackG, open: () => openLightbox(S.sel, i) })));
+}
+
+/* ═══════════════ HISTORIAL ═══════════════ */
+let histUrls = [], histGen = 0;
+function snippetNodes(text, q) {
+  text = text.replace(/\s+/g, ' ').trim();
+  const plain = [document.createTextNode(text.slice(0, 220) + (text.length > 220 ? '…' : ''))];
+  if (!q) return plain;
+  let ns = '', map = [];
+  for (let i = 0; i < text.length; i++) for (const c of norm(text[i])) { ns += c; map.push(i); }
+  const at = ns.indexOf(q);
+  if (at < 0) return plain;
+  const s = map[at], e = map[Math.min(at + q.length - 1, map.length - 1)] + 1;
+  const from = Math.max(0, s - 70), to = Math.min(text.length, e + 110), out = [];
+  if (from > 0) out.push(document.createTextNode('…'));
+  out.push(document.createTextNode(text.slice(from, s)));
+  const mk = document.createElement('mark'); mk.textContent = text.slice(s, e); out.push(mk);
+  out.push(document.createTextNode(text.slice(e, to) + (to < text.length ? '…' : '')));
+  return out;
+}
+function renderHistorial() {
+  releaseMedia($('#histBody'));
+  histUrls.forEach(u => URL.revokeObjectURL(u)); histUrls = [];
+  const hgen = ++histGen, trackH = u => { if (hgen !== histGen) return false; histUrls.push(u); return true; };
+  const h = S.hist, q = norm(h.q.trim());
+  $$('#histFilter button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === h.filter)));
+  $$('#histMode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === h.mode)));
+  let list = [...S.entries.values()].filter(e => h.filter === 'text' ? hasText(e) : h.filter === 'media' ? hasMedia(e) : isWritten(e));
+  if (q) list = list.filter(e => norm(e.text).includes(q));
+  list.sort((a, b) => a.date < b.date ? 1 : -1);
+  const body = $('#histBody'); body.textContent = '';
+  let more = false;
+  if (!list.length) {
+    body.innerHTML = `<div class="empty-state"><div class="big">🕯️</div><p>${q ? 'No encontré nada con esa búsqueda.' : 'Aquí aparecerán tus entradas cuando empieces a escribir.'}</p></div>`;
+  } else if (h.mode === 'list') {
+    const wrap = document.createElement('div'); wrap.className = 'hlist';
+    for (const e of list.slice(0, h.limit)) {
+      const c = document.createElement('div'); c.className = 'hcard'; c.dataset.d = e.date; c.tabIndex = 0; c.setAttribute('role', 'link');
+      const hh = document.createElement('div'); hh.className = 'hh';
+      const a = document.createElement('span'); a.textContent = fmtShort(e.date);
+      const b = document.createElement('span'); b.textContent = (MOODS[e.mood] || '') + (e.pill ? ' 💊' : '');
+      hh.append(a, b); c.append(hh);
+      const p = document.createElement('p'); p.append(...(hasText(e) ? snippetNodes(e.text, q) : [document.createTextNode('📷 Solo fotos o videos')])); c.append(p);
+      const ms = liveMedia(e);
+      if (ms.length) {
+        const hm = document.createElement('div'); hm.className = 'hm';
+        ms.slice(0, 4).forEach((m, i) => hm.append(makeTile(m, { track: trackH, open: () => { selectDay(e.date); goView('diario'); openLightbox(e.date, i); } })));
+        c.append(hm);
+      }
+      wrap.append(c);
+    }
+    body.append(wrap); more = list.length > h.limit;
+  } else {
+    const items = [];
+    for (const e of list) liveMedia(e).forEach((m, i) => items.push({ e, m, i }));
+    const g = document.createElement('div'); g.className = 'ggrid';
+    for (const it of items.slice(0, h.limit * 2)) g.append(makeTile(it.m, { track: trackH, open: () => { selectDay(it.e.date); goView('diario'); openLightbox(it.e.date, it.i); } }));
+    if (!items.length) body.innerHTML = '<div class="empty-state"><div class="big">📷</div><p>Aún no hay fotos ni videos. Agrégalos desde el Diario.</p></div>';
+    else body.append(g);
+    more = items.length > h.limit * 2;
+  }
+  $('#histMore').hidden = !more;
+}
+
+/* ═══════════════ AJUSTES ═══════════════ */
+function renderSyncInfo() {
+  const n = pendingCount(), lines = [];
+  lines.push(configured() ? (S.sync.lastOk ? 'Última sincronización: ' + new Date(S.sync.lastOk).toLocaleString('es-CL') : 'Conectado. Aún no se ha sincronizado.') : 'Sin conectar: todo se guarda solo en este dispositivo.');
+  if (configured()) lines.push(`${n} ${plural(n, 'día pendiente', 'días pendientes')} de subir · ${S.entries.size} ${plural(S.entries.size, 'día', 'días')} en este dispositivo`);
+  if (S.sync.err) lines.push('⚠ ' + S.sync.err);
+  $('#cfgSyncInfo').innerHTML = lines.map(esc).join('<br>');
+}
+async function renderStorage() {
+  const el = $('#cfgStorage');
+  try {
+    if (navigator.storage && navigator.storage.estimate) {
+      const est = await navigator.storage.estimate(), per = navigator.storage.persisted ? await navigator.storage.persisted() : false;
+      el.textContent = `${fmtBytes(est.usage || 0)} usados de ${fmtBytes(est.quota || 0)} · ${per ? 'protegido contra borrado automático ✓' : 'el navegador podría limpiarlo si falta espacio'}`;
+      $('#cfgPersist').hidden = per;
+    } else el.textContent = 'Tu navegador no informa el espacio.';
+  } catch (e) { el.textContent = 'No disponible.'; }
+}
+function renderConfig() {
+  const c = S.cfg;
+  $$('#cfgMode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === c.mode)));
+  $$('#cfgAccent button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === c.accent)));
+  $$('#cfgFont button').forEach(b => b.setAttribute('aria-pressed', String(Number(b.dataset.v) === Number(c.fontScale))));
+  $('#cfgName').value = c.name;
+  $('#cfgRemOn').setAttribute('aria-checked', String(c.remOn));
+  $('#cfgRemHour').value = String(c.remHour);
+  $('#cfgApiUrl').value = c.apiUrl; $('#cfgApiKey').value = c.apiKey;
+  $('#cfgAuto').setAttribute('aria-checked', String(c.autoSync));
+  const nb = $('#cfgNotif');
+  if (!('Notification' in window)) { nb.hidden = true; }
+  else { nb.textContent = Notification.permission === 'granted' ? 'Activadas ✓' : Notification.permission === 'denied' ? 'Bloqueadas' : 'Activar'; nb.disabled = Notification.permission !== 'default'; }
+  renderSyncInfo(); renderStorage();
+}
+
+/* ═══════════════ visor (lightbox) ═══════════════ */
+const LB = { date: null, list: [], i: 0, url: null, open: false };
+function openLightbox(date, i) {
+  const list = liveMedia(getE(date));
+  if (!list.length) return;
+  LB.date = date; LB.list = list; LB.i = Math.max(0, Math.min(i, list.length - 1));
+  if (!LB.open) { LB.open = true; $('#lightbox').classList.add('open'); document.body.style.overflow = 'hidden'; try { history.pushState({ lb: 1 }, ''); } catch (e) {} }
+  showLb();
+}
+function closeLightbox(fromPop) {
+  if (!LB.open) return;
+  LB.open = false; $('#lightbox').classList.remove('open'); document.body.style.overflow = '';
+  releaseMedia($('#lbStage'));
+  if (LB.url) { URL.revokeObjectURL(LB.url); LB.url = null; }
+  $('#lbStage').textContent = '';
+  if (!fromPop && history.state && history.state.lb) { try { history.back(); } catch (e) {} }
+}
+async function showLb() {
+  const m = LB.list[LB.i], stage = $('#lbStage');
+  releaseMedia(stage);
+  if (LB.url) { URL.revokeObjectURL(LB.url); LB.url = null; }
+  stage.textContent = '';
+  $('#lbTitle').textContent = `${fmtShort(LB.date)} · ${LB.i + 1} / ${LB.list.length}`;
+  if (LB.list.length > 1) for (const [cls, txt, d] of [['lb-prev', '‹', -1], ['lb-next', '›', 1]]) {
+    const b = document.createElement('button'); b.className = 'lb-btn lb-nav ' + cls; b.textContent = txt; b.setAttribute('aria-label', d < 0 ? 'Anterior' : 'Siguiente');
+    b.onclick = ev => { ev.stopPropagation(); lbStep(d); }; stage.append(b);
+  }
+  let blob = await getBlob(m.id);
+  if (!blob) {
+    const msg = document.createElement('div'); msg.className = 'lb-msg'; msg.dataset.id = m.id;
+    msg.innerHTML = `Descargando ${m.type === 'video' ? 'video' : 'foto'}${m.size ? ' (' + fmtBytes(m.size) + ')' : ''}…<div style="width:220px;height:4px;background:rgba(255,255,255,.2);margin:.6rem auto 0;border-radius:2px"><div class="prog" style="height:100%;background:var(--accent);width:${(S.dlProg.get(m.id) || 0) * 100}%"></div></div>`;
+    stage.append(msg);
+    try { blob = await ensureBlob(m); } catch (err) { if (LB.list[LB.i] === m && LB.open) msg.textContent = 'No se pudo descargar: ' + err.message; return; }
+    if (LB.list[LB.i] !== m || !LB.open) return;
+    msg.remove();
+  }
+  LB.url = URL.createObjectURL(blob);
+  const el = document.createElement(m.type === 'video' ? 'video' : 'img');
+  el.src = LB.url;
+  if (m.type === 'video') { el.controls = true; el.playsInline = true; el.autoplay = true; } else el.alt = '';
+  stage.prepend(el);
+  const tile = $(`.tile[data-id="${m.id}"]`); if (tile && !$('img,video', tile)) { /* refresca miniatura recién descargada */ renderGallery(); }
+}
+function lbStep(d) { if (LB.list.length < 2) return; LB.i = (LB.i + d + LB.list.length) % LB.list.length; showLb(); }
+
+/* ═══════════════ navegación y eventos ═══════════════ */
+const VIEWS = { yo: ['Hoja de personaje', 'Tu progreso y las misiones de hoy'], diario: ['Diario', ''], historial: ['Historial', 'Busca entre tus recuerdos'], config: ['Ajustes', ''] };
+const saveDraft = debounce(() => { setText(S.draftDate || S.sel, $('#edText').value).catch(() => {}); }, 600);
+
+function goView(v) {
+  if (!VIEWS[v]) v = 'yo';
+  if (S.view === 'diario') saveDraft.flush();
+  S.view = v;
+  $$('.view').forEach(x => x.classList.toggle('active', x.id === 'view-' + v));
+  $$('.navbtn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  $('#topTitle').textContent = VIEWS[v][0]; $('#topSub').textContent = VIEWS[v][1];
+  try { history.replaceState(history.state && history.state.lb ? history.state : null, '', '#' + v); } catch (e) {}
+  window.scrollTo(0, 0);
+  renderLive();
+  if (v === 'diario') loadDay(S.sel);
+  if (v === 'config') renderConfig();
+}
+
+async function persistApi() {
+  const url = $('#cfgApiUrl').value.trim(), key = $('#cfgApiKey').value.trim();
+  const changed = url !== S.cfg.apiUrl;
+  S.cfg.apiUrl = url; S.cfg.apiKey = key;
+  await saveCfg();
+  if (changed) {   // otro servidor: hay que volver a subir todo
+    S.sync.cursor = 0; S.sync.lastOk = 0; await saveSyncMeta();
+    for (const e of S.entries.values()) {
+      for (const m of e.media) if (m.remoteId && await dbHas('blobs', m.id)) m.remoteId = '';
+      e.dirty = true; await dbPut('entries', e.date, e);
+    }
+  }
+  paintSync(); renderSyncInfo();
+  if (configured()) scheduleSync(500);
+  if (url && !/\/exec$/.test(url)) toast('La URL debería terminar en /exec');
+}
+
+function bind() {
+  $$('.navbtn').forEach(b => b.addEventListener('click', () => goView(b.dataset.view)));
+  $('#syncChip').addEventListener('click', () => { if (configured()) syncNow(true); else goView('config'); });
+
+  $('#yoQuests').addEventListener('click', ev => {
+    const q = ev.target.closest('.quest'); if (!q) return;
+    const a = q.dataset.a;
+    if (a === 'pill') setPill(S.today, !getE(S.today).pill);
+    else { selectDay(S.today); goView('diario'); if (a === 'write') $('#edText').focus(); else $('#fileAny').click(); }
+  });
+  $('#yoWeek').addEventListener('click', ev => { const b = ev.target.closest('button[data-d]'); if (b) setPill(b.dataset.d, !getE(b.dataset.d).pill); });
+  $('#yoMem').addEventListener('click', ev => { const b = ev.target.closest('.mem'); if (b) { selectDay(b.dataset.d); goView('diario'); } });
+
+  $('#calPrev').addEventListener('click', () => { S.calM--; if (S.calM < 0) { S.calM = 11; S.calY--; } renderCalendar(); });
+  $('#calNext').addEventListener('click', () => { S.calM++; if (S.calM > 11) { S.calM = 0; S.calY++; } renderCalendar(); });
+  $('#calTitle').addEventListener('click', () => selectDay(S.today));
+  $('#calGrid').addEventListener('click', ev => { const b = ev.target.closest('.day[data-d]'); if (b) selectDay(b.dataset.d); });
+  $('#calToggle').addEventListener('click', () => $('#calCol').classList.toggle('open'));
+  $('#dayPrev').addEventListener('click', () => selectDay(addDays(S.sel, -1)));
+  $('#dayNext').addEventListener('click', () => selectDay(addDays(S.sel, 1)));
+  $('#dayToday').addEventListener('click', () => selectDay(S.today));
+
+  $('#moodRow').addEventListener('click', ev => { const b = ev.target.closest('button[data-m]'); if (!b) return; const m = Number(b.dataset.m); setMood(S.sel, getE(S.sel).mood === m ? 0 : m); });
+  $('#pillBtn').addEventListener('click', () => setPill(S.sel, !getE(S.sel).pill));
+
+  const ta = $('#edText');
+  ta.addEventListener('input', () => {
+    S.draftDate = S.sel; autoGrow(ta);
+    $('#wordCount').textContent = `${words(ta.value)} palabras`;
+    renderSaveState(ta.value.length > MAX_TEXTO ? '⚠ Demasiado largo para sincronizar' : '… escribiendo');
+    saveDraft();
+  });
+  ta.addEventListener('blur', () => saveDraft.flush());
+  ta.addEventListener('paste', ev => {
+    const fs = Array.from((ev.clipboardData && ev.clipboardData.files) || []).filter(f => /^(image|video)\//.test(f.type));
+    if (fs.length) { ev.preventDefault(); addFiles(S.sel, fs); }
+  });
+  for (const id of ['#fileAny', '#fileCam']) $(id).addEventListener('change', ev => { const fs = Array.from(ev.target.files || []); ev.target.value = ''; addFiles(S.sel, fs); });
+  const card = $('#edCard');
+  card.addEventListener('dragover', ev => { if (ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files')) { ev.preventDefault(); card.classList.add('drop-on'); } });
+  card.addEventListener('dragleave', () => card.classList.remove('drop-on'));
+  card.addEventListener('drop', ev => { ev.preventDefault(); card.classList.remove('drop-on'); addFiles(S.sel, Array.from(ev.dataTransfer.files || [])); });
+  $('#saveBtn').addEventListener('click', async () => {
+    saveDraft.flush(); await Promise.resolve();
+    if (configured()) syncNow(true).then(ok => { if (ok) toast('Guardado y sincronizado ✓'); }); else toast('Guardado en este dispositivo ✓');
+  });
+
+  let hq = null;
+  $('#histQ').addEventListener('input', ev => { clearTimeout(hq); hq = setTimeout(() => { S.hist.q = ev.target.value; S.hist.limit = 30; renderHistorial(); }, 200); });
+  $('#histFilter').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b) { S.hist.filter = b.dataset.f; S.hist.limit = 30; renderHistorial(); } });
+  $('#histMode').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b) { S.hist.mode = b.dataset.m; S.hist.limit = 30; renderHistorial(); } });
+  $('#histMore').addEventListener('click', () => { S.hist.limit += 30; renderHistorial(); });
+  $('#histBody').addEventListener('click', ev => { const c = ev.target.closest('.hcard'); if (c) { selectDay(c.dataset.d); goView('diario'); } });
+  $('#histBody').addEventListener('keydown', ev => { if (ev.key === 'Enter') { const c = ev.target.closest('.hcard'); if (c) { selectDay(c.dataset.d); goView('diario'); } } });
+
+  /* ajustes */
+  const seg = (sel, key, parse = x => x) => $(sel).addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; S.cfg[key] = parse(b.dataset.v); saveCfg(); applyTheme(); renderConfig(); renderLive(); });
+  seg('#cfgMode', 'mode'); seg('#cfgAccent', 'accent'); seg('#cfgFont', 'fontScale', Number);
+  const saveName = debounce(() => saveCfg(), 400);
+  $('#cfgName').addEventListener('input', ev => { S.cfg.name = ev.target.value; saveName(); });
+  const sw = (sel, key, after) => $(sel).addEventListener('click', () => { S.cfg[key] = !S.cfg[key]; saveCfg(); renderConfig(); if (after) after(); });
+  sw('#cfgRemOn', 'remOn', () => { $('#banner').hidden = true; renderBanner(); });
+  sw('#cfgAuto', 'autoSync', () => scheduleSync(500));
+  for (let h = 0; h < 24; h++) { const o = document.createElement('option'); o.value = String(h); o.textContent = pad(h) + ':00'; $('#cfgRemHour').append(o); }
+  $('#cfgRemHour').addEventListener('change', ev => { S.cfg.remHour = Number(ev.target.value); saveCfg(); $('#banner').hidden = true; renderBanner(); });
+  $('#cfgNotif').addEventListener('click', async () => { try { await Notification.requestPermission(); } catch (e) {} renderConfig(); });
+  $('#cfgApiUrl').addEventListener('change', persistApi);
+  $('#cfgApiKey').addEventListener('change', persistApi);
+  $('#cfgKeyShow').addEventListener('click', () => { const i = $('#cfgApiKey'); const show = i.type === 'password'; i.type = show ? 'text' : 'password'; $('#cfgKeyShow').textContent = show ? 'Ocultar' : 'Ver'; });
+  $('#cfgTest').addEventListener('click', async () => {
+    await persistApi();
+    try {
+      const j = await api('ping', {}, { apiUrl: S.cfg.apiUrl, apiKey: S.cfg.apiKey, device: S.cfg.device });
+      const skew = Math.abs(Date.now() - j.serverTime);
+      toast(`✓ Conectado · ${j.entradas} ${plural(j.entradas, 'día', 'días')} en la hoja${skew > 120000 ? ` · ⚠ el reloj de este dispositivo está desfasado ${Math.round(skew / 60000)} min` : ''}`);
+    } catch (err) { toast('✗ ' + err.message); }
+  });
+  $('#cfgSyncNow').addEventListener('click', async () => { await persistApi(); syncNow(true).then(ok => { if (ok) toast('Sincronizado ✓'); }); });
+  $('#cfgFull').addEventListener('click', () => { S.sync.cursor = 0; saveSyncMeta(); syncNow(true); });
+  $('#cfgPersist').addEventListener('click', async () => {
+    try { const ok = await navigator.storage.persist(); toast(ok ? 'Datos protegidos ✓' : 'El navegador no lo permitió. Instalar la app suele ayudar.'); } catch (e) { toast('Tu navegador no lo permite.'); }
+    renderStorage();
+  });
+  $('#cfgExport').addEventListener('click', async () => {
+    toast('Preparando respaldo…');
+    try {
+      const { zip, count, noLocal } = await exportAll();
+      saveAs(zip, `diario-vida-${todayKey()}.zip`);
+      toast(`Respaldo listo: ${count} ${plural(count, 'día', 'días')}${noLocal ? ` (${noLocal} archivos no estaban descargados en este dispositivo)` : ''}.`);
+    } catch (err) { toast('No se pudo exportar: ' + err.message); }
+  });
+  $('#cfgImportFile').addEventListener('change', async ev => {
+    const f = ev.target.files[0]; ev.target.value = '';
+    if (!f) return;
+    try { const r = await importFile(f); toast(`Importado: ${r.nE} ${plural(r.nE, 'día', 'días')}, ${r.nM} ${plural(r.nM, 'archivo', 'archivos')}${r.missing ? ` (${r.missing} sin archivo)` : ''}.`); }
+    catch (err) { toast('No se pudo importar: ' + err.message); }
+  });
+
+  /* visor */
+  $('#lbClose').addEventListener('click', () => closeLightbox());
+  $('#lbStage').addEventListener('click', ev => { if (ev.target.id === 'lbStage') closeLightbox(); });
+  $('#lbSave').addEventListener('click', async () => {
+    const m = LB.list[LB.i]; if (!m) return;
+    const b = await getBlob(m.id); if (!b) return toast('Aún no está descargado.');
+    saveAs(b, `${LB.date}_${LB.i + 1}.${extOf(m.mime, m.name)}`);
+  });
+  $('#lbDel').addEventListener('click', async () => {
+    const m = LB.list[LB.i]; if (!m || !confirm('¿Quitar este archivo de la entrada?')) return;
+    await removeMedia(LB.date, m.id); closeLightbox(); if (S.view === 'diario') renderGallery();
+  });
+  let sx = null;
+  $('#lbStage').addEventListener('touchstart', ev => { sx = ev.touches[0].clientX; }, { passive: true });
+  $('#lbStage').addEventListener('touchend', ev => { if (sx == null) return; const dx = ev.changedTouches[0].clientX - sx; sx = null; if (Math.abs(dx) > 60) lbStep(dx < 0 ? 1 : -1); }, { passive: true });
+  window.addEventListener('popstate', () => closeLightbox(true));
+
+  document.addEventListener('keydown', ev => {
+    if (LB.open) { if (ev.key === 'Escape') closeLightbox(); else if (ev.key === 'ArrowLeft') lbStep(-1); else if (ev.key === 'ArrowRight') lbStep(1); return; }
+    if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 's') { ev.preventDefault(); if (S.view === 'diario') $('#saveBtn').click(); else syncNow(true); return; }
+    if (ev.altKey && S.view === 'diario' && (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight')) { ev.preventDefault(); selectDay(addDays(S.sel, ev.key === 'ArrowLeft' ? -1 : 1)); }
+  });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveDraft.flush(); else { tick(); scheduleSync(300); } });
+  window.addEventListener('pagehide', () => saveDraft.flush());
+  window.addEventListener('online', () => scheduleSync(500));
+  window.addEventListener('offline', () => { if (configured()) setSync('offline'); });
+  if (mq && mq.addEventListener) mq.addEventListener('change', () => { if (S.cfg.mode === 'auto') applyTheme(); });
+  document.addEventListener('pointerdown', () => { try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} }, { once: true });
+}
+
+/* ═══════════════ recordatorio y reloj ═══════════════ */
+async function maybeNotify() {
+  if (!S.cfg.remOn || !('Notification' in window) || Notification.permission !== 'granted') return;
+  const e = S.entries.get(S.today);
+  if ((e && e.pill) || new Date().getHours() < S.cfg.remHour) return;
+  if ((await dbGet('meta', 'notified')) === S.today) return;
+  await dbPut('meta', 'notified', S.today);
+  const title = '💊 ¿Ya tomaste tu pastilla?', opts = { body: 'Márcala en tu Diario de Vida.', tag: 'pill' };
+  try {
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) (await navigator.serviceWorker.ready).showNotification(title, opts);
+    else new Notification(title, opts);
+  } catch (err) { /* sin permiso o no soportado */ }
+}
+function tick() {
+  const t = todayKey();
+  if (t !== S.today) {
+    const wasToday = S.sel === S.today;
+    S.today = t; if (wasToday) S.sel = t;
+    S.stats = computeStats(S.entries, S.today); $('#banner').hidden = true;
+    renderLive();
+    if (S.view === 'diario' && wasToday) loadDay(S.sel);
+  }
+  renderBanner(); maybeNotify();
+  if (document.visibilityState === 'visible' && configured() && S.cfg.autoSync && !S.syncing && Date.now() - S.sync.lastOk > 180000) syncNow();
+}
+
+/* ═══════════════ migración desde la versión anterior ═══════════════ */
+async function dbAllKV(store) {
+  const db = await idb(), s = db.transaction(store).objectStore(store);
+  const [keys, vals] = await Promise.all([reqP(s.getAllKeys()), reqP(s.getAll())]);
+  return keys.map((k, i) => [k, vals[i]]);
+}
+async function migrateV1() {
+  for (const [date, old] of await dbAllKV('entries')) {
+    if (!old || old.v === 2 || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const now = Date.now(), media = [];
+    const olds = (old.media || []).filter(m => m && m.blob);
+    for (const x of (old.images || []).concat(old.image ? [old.image] : [])) { const b = dataUrlToBlob(x); if (b) olds.push({ type: 'image', blob: b }); }
+    let k = 0;
+    for (const m of olds) {
+      const id = uid(); await dbPut('blobs', id, m.blob);
+      media.push({ id, type: m.type === 'video' ? 'video' : 'image', mime: m.blob.type || '', name: '', size: m.blob.size, at: now + k++, remoteId: '' });
+    }
+    await dbPut('entries', date, { ...blankEntry(date), text: old.text || '', tText: old.text ? now : 0, pill: !!old.pill, tPill: old.pill ? now : 0, media, dirty: true, rev: 1 });
+  }
+}
+
+/* ═══════════════ inicio ═══════════════ */
+async function init() {
+  const saved = await dbGet('meta', 'config');
+  S.cfg = { ...DEF_CFG, ...(saved || {}) };
+  if (saved && !saved.mode && (saved.theme === 'dark' || saved.theme === 'light')) S.cfg.mode = saved.theme;   // config de la versión anterior
+  if (!['dorado', 'arcano', 'bosque', 'sakura'].includes(S.cfg.accent)) S.cfg.accent = 'dorado';
+  if (!S.cfg.device) S.cfg.device = uid();
+  await saveCfg();
+  const sy = await dbGet('meta', 'sync');
+  if (sy) { S.sync.cursor = sy.cursor || 0; S.sync.lastOk = sy.lastOk || 0; }
+  await migrateV1();
+  for (const [date, e] of await dbAllKV('entries')) if (e && e.v === 2) S.entries.set(date, e);
+  S.today = todayKey(); S.sel = S.today;
+  S.stats = computeStats(S.entries, S.today);
+  applyTheme(); bind();
+  goView((location.hash || '').slice(1));
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
+  if (configured()) setTimeout(() => syncNow(), 700);
+  setInterval(tick, 30000);
+  window.__dv = { S, syncNow, goView, selectDay, exportAll, importFile, getBlob, pendingCount, setText, setMood, setPill, removeMedia, ensureBlob };   // para depurar en la consola
+}
+init().catch(err => {
+  console.error(err);
+  document.body.insertAdjacentHTML('afterbegin', `<p style="padding:1rem;font-family:sans-serif">No se pudo iniciar la base de datos local (${esc(err && err.message)}). Prueba en una ventana normal, no privada.</p>`);
+});
+})();
+
+</script>
+</body>
+</html>
