@@ -225,6 +225,15 @@ textarea.en-text{width:100%;min-height:170px;resize:vertical;background:var(--pa
 @media (min-width:900px){textarea.en-text{min-height:340px}}
 .entry{background:var(--panel2);border:1px solid var(--border);border-radius:16px;padding:.8rem;margin-bottom:.9rem}
 .entry textarea.en-text{background:var(--panel)}
+.en-sum{display:flex;align-items:center;gap:.5rem;cursor:pointer;min-height:40px;user-select:none}
+.en-sum .en-chev{width:1.1rem;color:var(--dim)}
+.en-sum .en-st{font-variant-numeric:tabular-nums}
+.en-sum .en-snip{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--dim);font-size:.88rem}
+.en-sum .en-snip.empty{font-style:italic}
+.en-sum .en-mc{font-size:.8rem;color:var(--dim)}
+.entry.collapsed .en-body{display:none}
+.entry:not(.collapsed) .en-sum{margin-bottom:.6rem}
+.en-actions{margin-top:.7rem}
 .en-head{display:flex;align-items:center;gap:.45rem;margin-bottom:.6rem;flex-wrap:wrap}
 .en-head input[type=time],.en-head input[type=date]{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:.35rem .5rem;font-size:.9rem;min-height:38px}
 .en-head .en-state{flex:1 1 90px;min-width:0;text-align:right;font-size:.72rem}
@@ -1289,6 +1298,7 @@ function renderEditorMeta() {
     const e = getE(c.dataset.id); if (!e) continue;
     $$('.mood-row button', c).forEach(b => b.setAttribute('aria-checked', String(Number(b.dataset.m) === e.mood)));
     const ta = $('.en-text', c); $('.en-words', c).textContent = `${words(ta.value)} palabras`;
+    updateSummary(c, e);
     const ti = $('.en-time', c), di = $('.en-date', c);
     if (document.activeElement !== ti) ti.value = timeInput(e.at);
     if (document.activeElement !== di) di.value = e.date;
@@ -1318,10 +1328,30 @@ function renderGalleryEl(g, e) {
 }
 function renderGalleryFor(id) { const c = cardOf(id), e = getE(id); if (c && e) renderGalleryEl($('.en-gallery', c), e); }
 
+S.open = new Set();
+function setOpen(c, open, persist = true) {
+  c.classList.toggle('collapsed', !open);
+  $('.en-sum', c).setAttribute('aria-expanded', String(open));
+  $('.en-chev', c).textContent = open ? '▾' : '▸';
+  if (open) autoGrow($('.en-text', c));
+  if (persist) { if (open) S.open.add(c.dataset.id); else S.open.delete(c.dataset.id); }
+}
+function updateSummary(c, e) {
+  $('.en-st', c).textContent = fmtTime(e.at);
+  $('.en-sm', c).textContent = MOODS[e.mood] || '';
+  const ta = $('.en-text', c), t = (ta ? ta.value : e.text).replace(/\s+/g, ' ').trim();
+  $('.en-snip', c).textContent = t ? t.slice(0, 90) + (t.length > 90 ? '…' : '') : 'Entrada vacía';
+  $('.en-snip', c).classList.toggle('empty', !t);
+  const n = liveMedia(e).length;
+  $('.en-mc', c).textContent = n ? `📷 ${n}` : '';
+}
 function buildEntryCard(e) {
   const c = document.createElement('div');
   c.className = 'entry'; c.dataset.id = e.id;
-  c.innerHTML = `<div class="en-head">
+  c.innerHTML = `<div class="en-sum" role="button" tabindex="0" aria-expanded="true">
+      <span class="en-chev" aria-hidden="true">▾</span><b class="en-st"></b><span class="en-sm"></span><span class="en-snip"></span><span class="en-mc"></span>
+    </div>
+    <div class="en-body"><div class="en-head">
       <input type="time" class="en-time" aria-label="Hora de la entrada">
       <input type="date" class="en-date" aria-label="Fecha de la entrada">
       <span class="en-state muted sm"></span>
@@ -1341,7 +1371,8 @@ function buildEntryCard(e) {
       <label class="btn">📷 Foto o video<input class="en-file" type="file" accept="image/*,video/*" multiple hidden></label>
       <label class="btn only-touch">📸 Cámara<input class="en-cam" type="file" accept="image/*" capture="environment" hidden></label>
     </div>
-    <div class="gallery en-gallery"></div>`;
+    <div class="gallery en-gallery"></div>
+    <div class="actions en-actions"><button type="button" class="btn primary en-save">Guardar entrada</button></div></div>`;
   const ta = $('.en-text', c); ta.value = e.text;
   $('.en-time', c).value = timeInput(e.at); $('.en-date', c).value = e.date;
   return c;
@@ -1352,14 +1383,17 @@ function renderDay(focusId) {
   const box = $('#entries'); box.textContent = '';
   let list = dayEntries(S.sel);
   if (!list.length) { const e = blankEntry(S.sel); e.tAt = stamp(0); S.entries.set(e.id, e); dbPut('entries', e.id, e).catch(() => {}); list = [e]; }
-  for (const e of list) {
+  if (focusId) S.open.add(focusId);
+  for (const e of list) {   // abiertas: la que editas, las vacías y las que tú abriste; el resto queda plegado
     const c = buildEntryCard(e); box.append(c);
-    autoGrow($('.en-text', c)); renderGalleryEl($('.en-gallery', c), e);
+    renderGalleryEl($('.en-gallery', c), e);
+    setOpen(c, S.open.has(e.id) || !isWritten(e) || list.length === 1, false);
   }
   renderCalendar(); renderEditorMeta();
   if (focusId) { const c = cardOf(focusId); if (c) { c.scrollIntoView({ block: 'center', behavior: 'smooth' }); $('.en-text', c).focus(); } }
 }
 function loadDay(date, focusId) {
+  if (date !== S.sel) S.open = new Set();
   S.sel = date;
   const d = parseKey(date); S.calY = d.getFullYear(); S.calM = d.getMonth();
   purgeEmpty();
@@ -1604,6 +1638,18 @@ async function persistApi() {
   if (url && !/\/exec$/.test(url)) toast('La URL debería terminar en /exec');
 }
 
+/** «Guardar entrada»: guarda el texto, sincroniza y pliega la entrada. */
+async function saveEntry(id) {
+  const c = cardOf(id), e = getE(id); if (!c || !e) return;
+  saveDraft.flush();
+  await setText(id, $('.en-text', c).value).catch(() => {});
+  const cur = getE(id);
+  if (!isWritten(cur) && !cur.mood) { toast('Escribe algo o agrega una foto antes de guardar.'); return; }
+  setOpen(c, false); updateSummary(c, cur);
+  if (configured()) syncNow(true).then(ok => { if (ok) toast('Entrada guardada y sincronizada ✓'); });
+  else toast('Entrada guardada en este dispositivo ✓');
+}
+
 function bind() {
   $$('.navbtn').forEach(b => b.addEventListener('click', () => goView(b.dataset.view)));
   $('#syncChip').addEventListener('click', () => { if (configured()) syncNow(true); else goView('config'); });
@@ -1636,6 +1682,9 @@ function bind() {
   const box = $('#entries'), idOf = el => { const c = el.closest('.entry'); return c && c.dataset.id; };
   box.addEventListener('click', ev => {
     const id = idOf(ev.target); if (!id) return;
+    const sum = ev.target.closest('.en-sum');
+    if (sum) { const c = sum.closest('.entry'); setOpen(c, c.classList.contains('collapsed')); return; }
+    if (ev.target.closest('.en-save')) { saveEntry(id); return; }
     const mb = ev.target.closest('.mood-row button[data-m]');
     if (mb) { const m = Number(mb.dataset.m), e = getE(id); setMood(id, e && e.mood === m ? 0 : m); return; }
     if (ev.target.closest('.en-del')) {
@@ -1645,6 +1694,10 @@ function bind() {
       deleteEntry(id).then(() => { renderDay(); toast('Entrada eliminada'); });
     }
   });
+  box.addEventListener('keydown', ev => {
+    const sum = ev.target.closest && ev.target.closest('.en-sum');
+    if (sum && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); const c = sum.closest('.entry'); setOpen(c, c.classList.contains('collapsed')); }
+  });
   box.addEventListener('input', ev => {
     const ta = ev.target.closest('.en-text'); if (!ta) return;
     const id = idOf(ta);
@@ -1653,6 +1706,7 @@ function bind() {
     $('.en-words', ta.closest('.entry')).textContent = `${words(ta.value)} palabras`;
     renderSaveState('… escribiendo');
     if (ta.value.length > MAX_TEXTO) $('.en-state', ta.closest('.entry')).textContent = '⚠ Demasiado largo para sincronizar';
+    updateSummary(ta.closest('.entry'), getE(id));
     saveDraft();
   });
   box.addEventListener('focusout', ev => { if (ev.target.closest('.en-text')) saveDraft.flush(); });
