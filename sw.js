@@ -1,6 +1,6 @@
 /* Service worker del Diario de Vida: deja la app disponible sin conexión.
  * Los datos NO pasan por aquí: viven en IndexedDB y se sincronizan con Apps Script. */
-const CACHE = 'diario-vida-v3';
+const CACHE = 'diario-vida-v4';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {

@@ -221,8 +221,17 @@ code{font-family:var(--ff-mono);font-size:.85em;background:var(--panel2);padding
 .mood-row .muted{margin-right:.3rem;font-size:.82rem}
 .mood-row button{width:44px;height:44px;border-radius:12px;background:var(--panel2);border:1px solid var(--border);font-size:1.4rem;filter:grayscale(.9);opacity:.65}
 .mood-row button[aria-checked="true"]{filter:none;opacity:1;border-color:var(--accent);box-shadow:0 0 0 2px color-mix(in srgb,var(--accent) 35%,transparent)}
-textarea#edText{width:100%;min-height:240px;resize:vertical;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;font-size:1rem;line-height:1.6}
-@media (min-width:900px){textarea#edText{min-height:340px}}
+textarea.en-text{width:100%;min-height:170px;resize:vertical;background:var(--panel2);border:1px solid var(--border);border-radius:12px;padding:.9rem 1rem;font-size:1rem;line-height:1.6}
+@media (min-width:900px){textarea.en-text{min-height:340px}}
+.entry{background:var(--panel2);border:1px solid var(--border);border-radius:16px;padding:.8rem;margin-bottom:.9rem}
+.entry textarea.en-text{background:var(--panel)}
+.en-head{display:flex;align-items:center;gap:.45rem;margin-bottom:.6rem;flex-wrap:wrap}
+.en-head input[type=time],.en-head input[type=date]{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:.35rem .5rem;font-size:.9rem;min-height:38px}
+.en-head .en-state{flex:1 1 90px;min-width:0;text-align:right;font-size:.72rem}
+.en-head .en-del{width:38px;height:38px}
+.mood-row button{width:40px;height:40px}
+.add-entry{width:100%;justify-content:center;margin-top:.2rem;border-style:dashed}
+#entries:empty{display:none}
 .ed-meta{display:flex;justify-content:space-between;font-size:.74rem;color:var(--dim);margin:.35rem .1rem .8rem}
 .media-bar{display:flex;gap:.5rem;flex-wrap:wrap}
 .gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:.55rem;margin-top:.7rem}
@@ -336,23 +345,8 @@ textarea#edText{width:100%;min-height:240px;resize:vertical;background:var(--pan
                 <button class="btn sm" id="dayToday">Hoy</button>
                 <button class="btn sm only-small" id="calToggle" aria-label="Mostrar calendario">📅</button>
               </div>
-              <div class="mood-row" id="moodRow" role="radiogroup" aria-label="Ánimo del día">
-                <span class="muted">Ánimo</span>
-                <button role="radio" data-m="1" aria-label="Muy mal" aria-checked="false">😞</button>
-                <button role="radio" data-m="2" aria-label="Mal" aria-checked="false">😕</button>
-                <button role="radio" data-m="3" aria-label="Normal" aria-checked="false">😐</button>
-                <button role="radio" data-m="4" aria-label="Bien" aria-checked="false">🙂</button>
-                <button role="radio" data-m="5" aria-label="Muy bien" aria-checked="false">😄</button>
-              </div>
-              <textarea id="edText" placeholder="¿Qué pasó hoy?" spellcheck="true" aria-label="Texto de la entrada"></textarea>
-              <div class="ed-meta"><span id="wordCount"></span><span id="saveState"></span></div>
-              <div class="media-bar">
-                <label class="btn" for="fileAny">📷 Foto o video</label>
-                <input id="fileAny" type="file" accept="image/*,video/*" multiple hidden>
-                <label class="btn only-touch" for="fileCam">📸 Cámara</label>
-                <input id="fileCam" type="file" accept="image/*" capture="environment" hidden>
-              </div>
-              <div class="gallery" id="gallery"></div>
+              <div id="entries"></div>
+              <button class="btn add-entry" id="newEntry" type="button">＋ Nueva entrada</button>
               <button class="pill-toggle" id="pillBtn" aria-pressed="false">
                 <span class="pi">💊</span>
                 <span class="pt">Pastilla de este día<small id="pillSub">Pendiente</small></span>
@@ -495,16 +489,17 @@ function b64ToBytes(b64) {
 }
 
 /* ═══════════════ base de datos local (IndexedDB) ═══════════════
- * entries: fecha → entrada (solo datos, liviana)
+ * entries: id → entrada (varias por día; solo datos, liviana)
+ * days:    fecha → datos del día (pastilla)
  * blobs:   id    → Blob (fotos/videos)
  * meta:    config, sync…
  * Se mantiene el nombre de la versión anterior para migrar sus datos.
  */
-const DB_NAME = 'diario_vida_db', DB_VER = 2;
+const DB_NAME = 'diario_vida_db', DB_VER = 3;
 let dbp = null;
 const idb = () => dbp || (dbp = new Promise((res, rej) => {
   const r = indexedDB.open(DB_NAME, DB_VER);
-  r.onupgradeneeded = () => { const db = r.result; ['entries', 'meta', 'blobs'].forEach(n => { if (!db.objectStoreNames.contains(n)) db.createObjectStore(n); }); };
+  r.onupgradeneeded = () => { const db = r.result; ['entries', 'days', 'meta', 'blobs'].forEach(n => { if (!db.objectStoreNames.contains(n)) db.createObjectStore(n); }); };
   r.onsuccess = () => res(r.result);
   r.onerror = () => rej(r.error);
 }));
@@ -528,7 +523,8 @@ function dbDel(s, k) {
 /* ═══════════════ estado ═══════════════ */
 const DEF_CFG = { mode: 'auto', accent: 'dorado', fontScale: 1, name: 'Edu', remOn: true, remHour: 21, apiUrl: '', apiKey: '', autoSync: true, device: '' };
 const S = {
-  entries: new Map(),
+  entries: new Map(),   // id → entrada (incluye borradas = tombstones)
+  days: new Map(),      // fecha → { date, pill, tPill, dirty, rev, baseT }
   cfg: { ...DEF_CFG },
   sync: { cursor: 0, lastOk: 0, state: 'local', err: '', up: null },
   view: 'yo', today: todayKey(), sel: todayKey(),
@@ -539,13 +535,51 @@ const S = {
 };
 { const d = new Date(); S.calY = d.getFullYear(); S.calM = d.getMonth(); }
 
-const blankEntry = date => ({ v: 2, date, text: '', tText: 0, mood: 0, tMood: 0, pill: false, tPill: 0, media: [], dirty: false, rev: 0, baseT: 0 });
-const getE = date => S.entries.get(date) || blankEntry(date);
 const stamp = prev => Math.max(Date.now(), (prev || 0) + 1);
+/** Hora por defecto de una entrada nueva en `date`: ahora mismo si es hoy; si es otro día, esta misma hora de ese día. */
+function defaultAt(date) {
+  const n = new Date(), d = parseKey(date);
+  d.setHours(n.getHours(), n.getMinutes(), 0, 0);
+  return d.getTime();
+}
+const blankEntry = (date, at, id) => ({ v: 3, id: id || uid(), date, at: at || defaultAt(date), tAt: 0, text: '', tText: 0, mood: 0, tMood: 0, del: false, tDel: 0, media: [], dirty: false, rev: 0, baseT: 0 });
+const blankDay = date => ({ v: 3, date, pill: false, tPill: 0, dirty: false, rev: 0, baseT: 0 });
+const getDay = date => S.days.get(date) || blankDay(date);
 const hasText = e => e.text.trim().length > 0;
 const liveMedia = e => e.media.filter(m => !m.deleted);
 const hasMedia = e => liveMedia(e).length > 0;
-const isWritten = e => hasText(e) || hasMedia(e);
+const isWritten = e => !e.del && (hasText(e) || hasMedia(e));
+const byTime = (a, b) => (a.at - b.at) || (a.id < b.id ? -1 : 1);
+const liveEntries = () => [...S.entries.values()].filter(e => !e.del);
+/** Entradas vivas de un día, de la más antigua a la más nueva. */
+const dayEntries = date => liveEntries().filter(e => e.date === date).sort(byTime);
+const fmtTime = at => new Date(at).toLocaleTimeString('es-CL', { hour: '2-digit', minute: '2-digit', hour12: false });
+const timeInput = at => { const d = new Date(at); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+/** Combina fecha 'AAAA-MM-DD' y hora 'HH:MM' en milisegundos locales. */
+function atFrom(date, hhmm) {
+  const [h, m] = String(hhmm || '00:00').split(':').map(Number), d = parseKey(date);
+  d.setHours(h || 0, m || 0, 0, 0);
+  return d.getTime();
+}
+/** Ánimo del día = promedio de los ánimos de sus entradas (0 si no hay). */
+function dayMood(date) {
+  const ms = dayEntries(date).map(e => e.mood).filter(Boolean);
+  return ms.length ? ms.reduce((a, b) => a + b, 0) / ms.length : 0;
+}
+
+/** Resumen por fecha para pintar calendario, mapa de calor, etc. sin recorrer todo cada vez. */
+function buildIndex(entries, days) {
+  const m = new Map();
+  const get = k => { let x = m.get(k); if (!x) m.set(k, x = { n: 0, text: 0, media: 0, written: 0, mood: 0, moodN: 0, pill: false }); return x; };
+  for (const e of entries.values()) {
+    if (e.del) continue;
+    const x = get(e.date);
+    if (hasText(e)) x.text++; if (hasMedia(e)) x.media++; if (isWritten(e)) { x.written++; x.n++; }
+    if (e.mood) { x.mood += e.mood; x.moodN++; }
+  }
+  for (const d of days.values()) if (d.pill) get(d.date).pill = true;
+  return m;
+}
 
 /* ═══════════════ fusión (misma lógica que el servidor) ═══════════════ */
 function mergeMedia(x, y) {
@@ -559,18 +593,25 @@ function mergeMedia(x, y) {
 }
 function mergeEntry(a, b) {
   const r = { ...a };
-  for (const [f, t] of [['text', 'tText'], ['mood', 'tMood'], ['pill', 'tPill']]) {
+  if ((b.tAt || 0) > (a.tAt || 0)) { r.date = b.date; r.at = b.at; r.tAt = b.tAt; }
+  for (const [f, t] of [['text', 'tText'], ['mood', 'tMood'], ['del', 'tDel']]) {
     if ((b[t] || 0) > (a[t] || 0)) { r[f] = b[f]; r[t] = b[t]; }
   }
   r.media = mergeMedia(a.media || [], b.media || []);
   return r;
 }
+function mergeDay(a, b) {
+  return (b.tPill || 0) > (a.tPill || 0) ? { ...a, pill: b.pill, tPill: b.tPill } : { ...a };
+}
 const mediaSig = list => list.map(m => `${m.id}|${m.deleted ? 1 : 0}|${m.remoteId || ''}`).sort().join(',');
-const sameAsRemote = (m, r) => m.text === r.text && m.tText === r.tText && m.mood === r.mood && m.tMood === r.tMood &&
-  m.pill === r.pill && m.tPill === r.tPill && mediaSig(m.media) === mediaSig(r.media || []);
+const sameAsRemote = (m, r) => m.date === r.date && m.at === r.at && m.tAt === (r.tAt || 0) && m.text === r.text && m.tText === r.tText &&
+  m.mood === r.mood && m.tMood === r.tMood && !!m.del === !!r.del && m.tDel === (r.tDel || 0) && mediaSig(m.media) === mediaSig(r.media || []);
+const sameDayAsRemote = (m, r) => m.pill === !!r.pill && m.tPill === (r.tPill || 0);
 const cleanMedia = m => ({ id: m.id, type: m.type, mime: m.mime || '', name: m.name || '', size: m.size || 0, at: m.at || 0, remoteId: m.remoteId || '', deleted: !!m.deleted });
-const wireEntry = e => ({ date: e.date, text: e.text, tText: e.tText, mood: e.mood, tMood: e.tMood, pill: e.pill, tPill: e.tPill, media: e.media.map(cleanMedia), baseT: e.baseT || 0 });
-const fromWire = r => ({ ...blankEntry(r.date), text: r.text || '', tText: r.tText || 0, mood: r.mood || 0, tMood: r.tMood || 0, pill: !!r.pill, tPill: r.tPill || 0, media: (r.media || []).map(m => ({ ...m })) });
+const wireEntry = e => ({ id: e.id, kind: 'e', date: e.date, at: e.at, tAt: e.tAt, text: e.text, tText: e.tText, mood: e.mood, tMood: e.tMood, del: !!e.del, tDel: e.tDel, media: e.media.map(cleanMedia), baseT: e.baseT || 0 });
+const wireDay = d => ({ id: 'd:' + d.date, kind: 'd', date: d.date, pill: d.pill, tPill: d.tPill, baseT: d.baseT || 0 });
+const fromWire = r => ({ ...blankEntry(r.date, r.at, r.id), tAt: r.tAt || 0, text: r.text || '', tText: r.tText || 0, mood: r.mood || 0, tMood: r.tMood || 0, del: !!r.del, tDel: r.tDel || 0, media: (r.media || []).map(m => ({ ...m })) });
+const dayFromWire = r => ({ ...blankDay(r.date), pill: !!r.pill, tPill: r.tPill || 0 });
 
 /* ═══════════════ estadísticas / RPG ═══════════════ */
 const TITLES = ['Aprendiz', 'Cronista', 'Escriba', 'Bardo', 'Archivista', 'Sabio', 'Oráculo', 'Gran Maestro'];
@@ -585,16 +626,15 @@ function bestStreak(sorted) {
   for (const k of sorted) { run = (prev && dayNum(k) - dayNum(prev) === 1) ? run + 1 : 1; if (run > best) best = run; prev = k; }
   return best;
 }
-function computeStats(entries, today) {
-  const list = [...entries.values()];
-  const written = list.filter(isWritten).map(e => e.date).sort();
-  const pills = list.filter(e => e.pill).map(e => e.date).sort();
+function computeStats(entries, days, today) {
+  const list = [...entries.values()].filter(e => !e.del);
+  const pills = [...days.values()].filter(d => d.pill).map(d => d.date).sort();
+  const written = [...new Set(list.filter(isWritten).map(e => e.date))].sort();
   const wSet = new Set(written), pSet = new Set(pills);
-  let xp = 0, totalWords = 0, mediaCount = 0;
+  let xp = 5 * pills.length, totalWords = 0, mediaCount = 0;
   for (const e of list) {
     if (hasText(e)) { const w = words(e.text); totalWords += w; xp += 10 + Math.min(10, Math.floor(w / 20)); }
     const mc = liveMedia(e).length; mediaCount += mc; if (mc) xp += 5;
-    if (e.pill) xp += 5;
     if (e.mood) xp += 1;
   }
   const level = Math.floor((25 + Math.sqrt(625 + 100 * xp)) / 50);
@@ -603,8 +643,10 @@ function computeStats(entries, today) {
   const inWin = (k, n) => { const d = dayNum(today) - dayNum(k); return d >= 0 && d < n; };
   const vit = pills.filter(k => inWin(k, win)).length / win;
   const cons = written.filter(k => inWin(k, win)).length / win;
-  const moods = list.filter(e => e.mood && inWin(e.date, 14)).map(e => e.mood);
-  const mood = moods.length ? (moods.reduce((a, b) => a + b, 0) / moods.length - 1) / 4 : null;
+  const perDay = new Map();                      // ánimo: promedio por día, luego promedio de días
+  for (const e of list) if (e.mood && inWin(e.date, 14)) { const p = perDay.get(e.date) || []; p.push(e.mood); perDay.set(e.date, p); }
+  const dm = [...perDay.values()].map(a => a.reduce((x, y) => x + y, 0) / a.length);
+  const mood = dm.length ? (dm.reduce((a, b) => a + b, 0) / dm.length - 1) / 4 : null;
   const entriesCount = list.filter(hasText).length;
   const st = {
     xp, level, title: TITLES[Math.min(level - 1, TITLES.length - 1)], into: xp - xpForLevel(level), need: xpForLevel(level + 1) - xpForLevel(level),
@@ -619,9 +661,9 @@ const ACHIEVEMENTS = [
   { i: '🌱', t: 'Primera página', d: 'Escribe tu primera entrada', test: s => s.entriesCount >= 1 },
   { i: '🔥', t: 'Racha de 7', d: '7 días seguidos escribiendo', test: s => s.bestW >= 7 },
   { i: '🌋', t: 'Racha de 30', d: '30 días seguidos escribiendo', test: s => s.bestW >= 30 },
-  { i: '📚', t: '10 entradas', d: 'Diez días con texto', test: s => s.entriesCount >= 10 },
-  { i: '🏛️', t: '50 entradas', d: 'Cincuenta días con texto', test: s => s.entriesCount >= 50 },
-  { i: '👑', t: '100 entradas', d: 'Cien días con texto', test: s => s.entriesCount >= 100 },
+  { i: '📚', t: '10 entradas', d: 'Diez entradas con texto', test: s => s.entriesCount >= 10 },
+  { i: '🏛️', t: '50 entradas', d: 'Cincuenta entradas con texto', test: s => s.entriesCount >= 50 },
+  { i: '👑', t: '100 entradas', d: 'Cien entradas con texto', test: s => s.entriesCount >= 100 },
   { i: '📷', t: 'Primer recuerdo', d: 'Agrega tu primera foto o video', test: s => s.mediaCount >= 1 },
   { i: '🖼️', t: 'Coleccionista', d: '25 fotos o videos', test: s => s.mediaCount >= 25 },
   { i: '💊', t: 'Semana al día', d: '7 días seguidos con pastilla', test: s => s.bestP >= 7 },
@@ -643,19 +685,50 @@ function onStorageError(err) {
 
 async function commit(e, quiet = false) {
   e.dirty = true; e.rev = (e.rev || 0) + 1;
-  S.entries.set(e.date, e);
-  try { await dbPut('entries', e.date, e); } catch (err) { onStorageError(err); throw err; }
+  S.entries.set(e.id, e);
+  try { await dbPut('entries', e.id, e); } catch (err) { onStorageError(err); throw err; }
   refreshDerived();
   if (!quiet) scheduleSync();
 }
-async function setText(date, text) { const e = getE(date); if (e.text === text) return; e.text = text; e.tText = stamp(e.tText); await commit(e); }
-async function setMood(date, m) { const e = getE(date); if (e.mood === m) return; e.mood = m; e.tMood = stamp(e.tMood); await commit(e); }
-async function setPill(date, v) { const e = getE(date); if (e.pill === v) return; e.pill = v; e.tPill = stamp(e.tPill); await commit(e); }
-async function removeMedia(date, id) {
-  const e = getE(date), m = e.media.find(x => x.id === id);
+async function commitDay(d, quiet = false) {
+  d.dirty = true; d.rev = (d.rev || 0) + 1;
+  S.days.set(d.date, d);
+  try { await dbPut('days', d.date, d); } catch (err) { onStorageError(err); throw err; }
+  refreshDerived();
+  if (!quiet) scheduleSync();
+}
+const getE = id => S.entries.get(id);
+/** Crea una entrada vacía en `date` (solo se guarda/sincroniza cuando tenga contenido). */
+async function newEntry(date) {
+  const e = blankEntry(date);
+  e.tAt = stamp(0);
+  S.entries.set(e.id, e);
+  await dbPut('entries', e.id, e).catch(onStorageError);
+  return e;
+}
+async function setText(id, text) { const e = getE(id); if (!e || e.del || e.text === text) return; e.text = text; e.tText = stamp(e.tText); await commit(e); }
+async function setMood(id, m) { const e = getE(id); if (!e || e.del || e.mood === m) return; e.mood = m; e.tMood = stamp(e.tMood); await commit(e); }
+/** Cambia fecha y/o hora de la entrada (hhmm = 'HH:MM'). */
+async function setWhen(id, date, hhmm) {
+  const e = getE(id); if (!e || e.del) return;
+  const at = atFrom(date, hhmm);
+  if (e.date === date && e.at === at) return;
+  e.date = date; e.at = at; e.tAt = stamp(e.tAt); await commit(e);
+}
+async function setPill(date, v) { const d = getDay(date); if (d.pill === v && S.days.has(date)) return; d.pill = v; d.tPill = stamp(d.tPill); await commitDay(d); }
+async function deleteEntry(id) {
+  const e = getE(id); if (!e || e.del) return;
+  const sinServidor = !e.baseT && !e.media.some(m => m.remoteId);
+  for (const m of e.media) await dbDel('blobs', m.id).catch(() => {});
+  if (sinServidor && !e.dirty) { S.entries.delete(id); await dbDel('entries', id).catch(() => {}); refreshDerived(); return; }
+  e.del = true; e.tDel = stamp(e.tDel);
+  await commit(e);
+}
+async function removeMedia(id, mediaId) {
+  const e = getE(id), m = e && e.media.find(x => x.id === mediaId);
   if (!m || m.deleted) return;
   m.deleted = true;
-  await dbDel('blobs', id).catch(() => {});
+  await dbDel('blobs', mediaId).catch(() => {});
   await commit(e);
 }
 
@@ -682,10 +755,11 @@ async function prepareMedia(f) {
   const { blob } = await resizeImage(f);
   return { type: 'image', blob, mime: 'image/jpeg', name: (f.name || 'foto').replace(/\.[^.]+$/, '') + '.jpg' };
 }
-async function addFiles(date, files) {
+async function addFiles(id, files) {
   files = Array.from(files || []);
   if (!files.length) return;
-  const e = getE(date); let added = 0;
+  const e = getE(id); if (!e || e.del) return;
+  let added = 0;
   for (const f of files) {
     try {
       const it = await prepareMedia(f);
@@ -701,7 +775,7 @@ async function addFiles(date, files) {
   }
   if (added) {
     await commit(e);
-    if (S.sel === date) renderGallery();
+    renderGalleryFor(e.id);
     toast(added === 1 ? 'Agregado ✓' : `${added} archivos agregados ✓`);
   }
 }
@@ -770,7 +844,7 @@ async function api(action, body = {}, cfg = S.cfg) {
   return j;
 }
 
-const pendingCount = () => { let n = 0; for (const e of S.entries.values()) if (e.dirty) n++; return n; };
+const pendingCount = () => { let n = 0; for (const e of S.entries.values()) if (e.dirty) n++; for (const d of S.days.values()) if (d.dirty) n++; return n; };
 function setSync(state, err = '') { S.sync.state = state; S.sync.err = err; paintSync(); }
 function scheduleSync(delay = 4000) {
   if (!configured() || !S.cfg.autoSync) { paintSync(); return; }
@@ -801,13 +875,15 @@ async function syncNow(manual = false) {
 }
 
 async function uploadPending() {
-  for (const date of [...S.entries.keys()].sort().reverse()) {
-    const e0 = S.entries.get(date);
+  const ids = [...S.entries.values()].filter(e => !e.del).sort((x, y) => y.at - x.at).map(e => e.id);
+  for (const id of ids) {
+    const e0 = S.entries.get(id);
+    if (!e0) continue;
     for (const m0 of e0.media.filter(m => !m.deleted && !m.remoteId)) {
       const blob = await getBlob(m0.id);
       if (!blob) continue;
       const fileId = await uploadBlob(m0, blob);
-      const e = S.entries.get(date), m = e && e.media.find(x => x.id === m0.id);
+      const e = S.entries.get(id), m = e && !e.del && e.media.find(x => x.id === m0.id);
       if (m) { m.remoteId = fileId; delete m.up; await commit(e, true); }
     }
   }
@@ -833,8 +909,18 @@ async function uploadBlob(m, blob) {
   throw new Error('La subida no avanza; se reintentará más tarde');
 }
 
+/** Aplica un registro del servidor. Devuelve las fechas afectadas y el id de entrada (si lo es). */
 async function applyRemote(r) {
-  const cur = S.entries.get(r.date);
+  if (r.kind === 'd') {
+    const cur = S.days.get(r.date);
+    const next = cur ? mergeDay(cur, r) : dayFromWire(r);
+    next.rev = cur ? cur.rev || 0 : 0;
+    next.dirty = cur ? !sameDayAsRemote(next, r) : false;
+    S.days.set(r.date, next);
+    await dbPut('days', r.date, next);
+    return { dates: [r.date], id: null };
+  }
+  const cur = S.entries.get(r.id);
   let next;
   if (!cur) next = { ...fromWire(r), baseT: r.tText || 0, dirty: false, rev: 0 };
   else {
@@ -843,38 +929,44 @@ async function applyRemote(r) {
     next.rev = cur.rev || 0;
     next.dirty = !sameAsRemote(next, r);
   }
-  S.entries.set(r.date, next);
-  await dbPut('entries', r.date, next);
+  S.entries.set(r.id, next);
+  await dbPut('entries', r.id, next);
+  if (next.del) for (const m of next.media) await dbDel('blobs', m.id).catch(() => {});
+  return { dates: cur && cur.date !== next.date ? [cur.date, next.date] : [next.date], id: next.id };
 }
+function noteRemote(out, changed) { out.dates.forEach(d => changed.dates.add(d)); if (out.id) changed.ids.add(out.id); }
 async function pushDirty() {
-  const dirty = [...S.entries.values()].filter(e => e.dirty).sort((a, b) => a.date < b.date ? -1 : 1);
-  const changed = new Set();
+  const dirty = [
+    ...[...S.entries.values()].filter(e => e.dirty).sort((a, b) => a.at - b.at).map(wireEntry),
+    ...[...S.days.values()].filter(d => d.dirty).sort((a, b) => a.date < b.date ? -1 : 1).map(wireDay)
+  ];
+  const changed = { dates: new Set(), ids: new Set() };
   for (let i = 0; i < dirty.length; i += 20) {
-    const res = await api('push', { entries: dirty.slice(i, i + 20).map(wireEntry) });
-    for (const r of res.entries) { await applyRemote(r); changed.add(r.date); }
+    const res = await api('push', { entries: dirty.slice(i, i + 20) });
+    for (const r of res.entries) noteRemote(await applyRemote(r), changed);
     if (res.rejected && res.rejected.length && !S.warnedRejected) {
       S.warnedRejected = true;
-      toast(`El día ${res.rejected[0].date} es demasiado largo para sincronizar (máx. ${MAX_TEXTO.toLocaleString('es-CL')} caracteres).`);
+      toast(`Una entrada es demasiado larga para sincronizar (máx. ${MAX_TEXTO.toLocaleString('es-CL')} caracteres).`);
     }
   }
-  if (changed.size) afterRemote(changed);
+  if (changed.dates.size) afterRemote(changed);
 }
 async function pullAll() {
-  const changed = new Set();
+  const changed = { dates: new Set(), ids: new Set() };
   for (let guard = 0; guard < 500; guard++) {
     const res = await api('pull', { since: S.sync.cursor });
-    for (const r of res.entries) { await applyRemote(r); changed.add(r.date); }
+    for (const r of res.entries) noteRemote(await applyRemote(r), changed);
     if (res.entries.length) { S.sync.cursor = Math.max(S.sync.cursor, res.cursor || 0); await saveSyncMeta(); }
     if (!res.more) break;
   }
-  if (changed.size) afterRemote(changed);
+  if (changed.dates.size) afterRemote(changed);
 }
-function afterRemote(dates) {
+function afterRemote(changed) {
   refreshDerived();
   // fotos (no videos) se bajan solas: así quedan disponibles aunque luego no haya señal
-  for (const d of dates) { const e = S.entries.get(d); if (e) for (const m of e.media) if (!m.deleted && m.type !== 'video' && m.remoteId) ensureBlob(m).catch(() => {}); }
-  if (S.view === 'diario' && dates.has(S.sel)) {
-    if (document.activeElement !== $('#edText')) loadDay(S.sel); else { renderGallery(); renderEditorMeta(); }
+  for (const id of changed.ids) { const e = S.entries.get(id); if (e && !e.del) for (const m of e.media) if (!m.deleted && m.type !== 'video' && m.remoteId) ensureBlob(m).catch(() => {}); }
+  if (S.view === 'diario' && changed.dates.has(S.sel)) {
+    if (!document.activeElement || !document.activeElement.closest('.entry')) renderDay(); else { renderEditorMeta(); }
   }
 }
 
@@ -954,19 +1046,20 @@ function saveAs(blob, name) {
   setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 async function exportAll() {
-  const files = [], entries = []; let noLocal = 0;
-  for (const e of [...S.entries.values()].sort((a, b) => a.date < b.date ? -1 : 1)) {
-    if (!isWritten(e) && !e.pill && !e.mood) continue;
+  const files = [], entries = [], days = []; let noLocal = 0;
+  for (const e of [...S.entries.values()].filter(x => !x.del).sort(byTime)) {
+    if (!isWritten(e) && !e.mood) continue;
     const media = []; let i = 0;
     for (const m of liveMedia(e)) {
       i++;
       const item = { ...cleanMedia(m) }, blob = await getBlob(m.id);
-      if (blob) { item.file = `media/${e.date}_${i}.${extOf(m.mime, m.name)}`; files.push({ name: item.file, blob }); } else noLocal++;
+      if (blob) { item.file = `media/${e.date}_${e.id}_${i}.${extOf(m.mime, m.name)}`; files.push({ name: item.file, blob }); } else noLocal++;
       media.push(item);
     }
-    entries.push({ date: e.date, text: e.text, tText: e.tText, mood: e.mood, tMood: e.tMood, pill: e.pill, tPill: e.tPill, media });
+    entries.push({ id: e.id, date: e.date, at: e.at, tAt: e.tAt, text: e.text, tText: e.tText, mood: e.mood, tMood: e.tMood, media });
   }
-  const json = new Blob([JSON.stringify({ format: 'diario-vida', version: 2, exportedAt: new Date().toISOString(), entries }, null, 1)], { type: 'application/json' });
+  for (const d of [...S.days.values()].sort((a, b) => a.date < b.date ? -1 : 1)) if (d.pill) days.push({ date: d.date, pill: true, tPill: d.tPill });
+  const json = new Blob([JSON.stringify({ format: 'diario-vida', version: 3, exportedAt: new Date().toISOString(), entries, days }, null, 1)], { type: 'application/json' });
   files.unshift({ name: 'entries.json', blob: json });
   return { zip: await buildZip(files), count: entries.length, noLocal };
 }
@@ -985,37 +1078,51 @@ function legacyToEntries(data) {   // formato de la versión anterior: { entries
   return out;
 }
 async function importFile(file) {
-  let list, blobs = new Map();
+  let list, dayList = [], blobs = new Map();
   const head = new Uint8Array(await file.slice(0, 4).arrayBuffer());
   if (head[0] === 0x50 && head[1] === 0x4b) {
     const files = await readZip(file), jf = files.find(f => f.name === 'entries.json');
     if (!jf) throw new Error('El .zip no trae entries.json');
-    list = JSON.parse(await jf.blob.text()).entries || [];
+    const j = JSON.parse(await jf.blob.text());
+    list = j.entries || []; dayList = j.days || [];
     for (const f of files) if (f.name.startsWith('media/')) blobs.set(f.name, f.blob);
   } else list = legacyToEntries(JSON.parse(await file.text()));
   let nE = 0, nM = 0, missing = 0;
   for (const x of list) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(x.date || '')) continue;
-    const cur = getE(x.date), media = [];
+    // Formatos anteriores (una entrada por día, sin id): id fijo por fecha, igual que la migración.
+    const old = !x.id;
+    if (old && x.pill) dayList.push({ date: x.date, pill: true, tPill: x.tPill ?? 1 });
+    const id = x.id || 'legacy-' + x.date;
+    if (old && !(x.text || '').trim() && !(x.media || []).length && !x.mood) continue;
+    const cur = S.entries.get(id) || blankEntry(x.date, x.at || atFrom(x.date, '12:00'), id);
+    const media = [];
     for (const m of (x.media || [])) {
       if (m.deleted) continue;
       if (m.id && cur.media.some(y => y.id === m.id)) continue;
       const blob = m.file ? blobs.get(m.file) : m.blob;
       if (!blob) { missing++; continue; }
-      const id = m.id || uid();
-      await dbPut('blobs', id, blob);
-      media.push({ id, type: m.type === 'video' ? 'video' : 'image', mime: m.mime || blob.type || '', name: m.name || '', size: blob.size, at: m.at || Date.now() + nM, remoteId: m.remoteId || '' });
+      const mid = m.id || uid();
+      await dbPut('blobs', mid, blob);
+      media.push({ id: mid, type: m.type === 'video' ? 'video' : 'image', mime: m.mime || blob.type || '', name: m.name || '', size: blob.size, at: m.at || Date.now() + nM, remoteId: m.remoteId || '' });
       nM++;
     }
-    const remote = { date: x.date, text: x.text || '', tText: x.tText ?? (x.text ? 1 : 0), mood: x.mood || 0, tMood: x.tMood ?? (x.mood ? 1 : 0), pill: !!x.pill, tPill: x.tPill ?? (x.pill ? 1 : 0), media };
+    const remote = { date: x.date, at: x.at || cur.at, tAt: x.tAt ?? 1, text: x.text || '', tText: x.tText ?? (x.text ? 1 : 0), mood: x.mood || 0, tMood: x.tMood ?? (x.mood ? 1 : 0), del: false, tDel: 0, media };
     const merged = mergeEntry(cur, remote);
     merged.dirty = true; merged.rev = (cur.rev || 0) + 1;
-    S.entries.set(x.date, merged);
-    await dbPut('entries', x.date, merged);
+    S.entries.set(id, merged);
+    await dbPut('entries', id, merged);
     nE++;
   }
+  for (const x of dayList) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(x.date || '') || !x.pill) continue;
+    const cur = getDay(x.date), next = mergeDay(cur, { pill: true, tPill: x.tPill ?? 1 });
+    next.dirty = true; next.rev = (cur.rev || 0) + 1;
+    S.days.set(x.date, next);
+    await dbPut('days', x.date, next);
+  }
   refreshDerived();
-  if (S.view === 'diario') loadDay(S.sel);
+  if (S.view === 'diario') renderDay();
   scheduleSync(1500);
   return { nE, nM, missing };
 }
@@ -1058,7 +1165,8 @@ function paintSync() {
   if (S.view === 'diario') renderSaveState();
 }
 
-function refreshDerived() { S.stats = computeStats(S.entries, S.today); renderLive(); }
+function refreshDerived() { S.idx = buildIndex(S.entries, S.days); S.stats = computeStats(S.entries, S.days, S.today); renderLive(); }
+const dIdx = k => (S.idx && S.idx.get(k)) || { n: 0, text: 0, media: 0, written: 0, mood: 0, moodN: 0, pill: false };
 function renderLive() {
   renderBanner(); paintSync();
   if (S.view === 'yo') renderYo();
@@ -1067,8 +1175,8 @@ function renderLive() {
 }
 
 function renderBanner() {
-  const b = $('#banner'), e = S.entries.get(S.today);
-  const show = S.cfg.remOn && new Date().getHours() >= S.cfg.remHour && !(e && e.pill);
+  const b = $('#banner');
+  const show = S.cfg.remOn && new Date().getHours() >= S.cfg.remHour && !getDay(S.today).pill;
   if (show && b.hidden) {
     b.hidden = false;
     b.innerHTML = '<span>💊 Aún no marcas tu pastilla de hoy.</span><button class="btn sm primary" id="bannerPill">Ya la tomé</button>';
@@ -1078,8 +1186,9 @@ function renderBanner() {
 
 /* ═══════════════ YO ═══════════════ */
 function renderYo() {
-  const st = S.stats || (S.stats = computeStats(S.entries, S.today));
-  const e = S.entries.get(S.today) || blankEntry(S.today);
+  if (!S.idx) S.idx = buildIndex(S.entries, S.days);
+  const st = S.stats || (S.stats = computeStats(S.entries, S.days, S.today));
+  const e = dIdx(S.today);
   const pct = Math.min(100, Math.round(st.into / st.need * 100));
   const nm = (S.cfg.name || '').trim();
   $('#yoHero').innerHTML = `<div class="hero"><div class="avatar"><span>${esc((nm.charAt(0) || '?').toUpperCase())}</span></div>
@@ -1089,14 +1198,14 @@ function renderYo() {
 
   const quests = [
     { a: 'pill', i: '💊', t: 'Tomar la pastilla', s: e.pill ? '¡Hecho!' : 'Toca para marcarla', x: 5, d: e.pill },
-    { a: 'write', i: '✍️', t: 'Escribir la entrada de hoy', s: hasText(e) ? '¡Hecho!' : 'Cuenta cómo va tu día', x: 10, d: hasText(e) },
-    { a: 'photo', i: '📷', t: 'Guardar un recuerdo', s: hasMedia(e) ? '¡Hecho!' : 'Una foto o video (opcional)', x: 5, d: hasMedia(e) }
+    { a: 'write', i: '✍️', t: 'Escribir la entrada de hoy', s: e.text ? '¡Hecho!' : 'Cuenta cómo va tu día', x: 10, d: e.text > 0 },
+    { a: 'photo', i: '📷', t: 'Guardar un recuerdo', s: e.media ? '¡Hecho!' : 'Una foto o video (opcional)', x: 5, d: e.media > 0 }
   ];
   $('#yoQuests').innerHTML = quests.map(q => `<button class="quest${q.d ? ' done' : ''}" data-a="${q.a}"><span class="qi">${q.i}</span><span class="qt"><b>${q.t}</b><small>${q.s}</small></span><span class="qx">+${q.x} XP</span><span class="qc">✓</span></button>`).join('');
 
   let wk = '';
   for (let i = 6; i >= 0; i--) {
-    const k = addDays(S.today, -i), x = S.entries.get(k), on = x && x.pill;
+    const k = addDays(S.today, -i), on = dIdx(k).pill;
     wk += `<button data-d="${k}" class="${on ? 'on' : ''}${i === 0 ? ' today' : ''}" aria-pressed="${!!on}" aria-label="${esc(fmtLong(k))}: ${on ? 'pastilla tomada' : 'sin marcar'}"><span>${esc(parseKey(k).toLocaleDateString('es-CL', { weekday: 'short' }).replace('.', ''))}</span><b>${parseKey(k).getDate()}</b><span class="t">💊</span></button>`;
   }
   $('#yoWeek').innerHTML = wk;
@@ -1113,22 +1222,21 @@ function renderYo() {
   const weeks = 24, t = dayNum(S.today), dow = (parseKey(S.today).getDay() + 6) % 7, start = t - dow - (weeks - 1) * 7;
   let cells = '';
   for (let w = 0; w < weeks; w++) for (let d = 0; d < 7; d++) {
-    const n = start + w * 7 + d, k = keyFromNum(n), x = S.entries.get(k);
-    let lv = 0;
-    if (x) lv = (hasText(x) && hasMedia(x)) ? 3 : (hasText(x) || hasMedia(x)) ? 2 : (x.pill || x.mood) ? 1 : 0;
-    cells += `<div class="c${lv ? ' l' + lv : ''}${x && x.pill ? ' pill' : ''}${n > t ? ' future' : ''}" title="${esc(fmtShort(k))}"></div>`;
+    const n = start + w * 7 + d, k = keyFromNum(n), x = dIdx(k);
+    const lv = (x.text && x.media) || x.written > 2 ? 3 : x.written ? 2 : (x.pill || x.moodN) ? 1 : 0;
+    cells += `<div class="c${lv ? ' l' + lv : ''}${x.pill ? ' pill' : ''}${n > t ? ' future' : ''}" title="${esc(fmtShort(k))}"></div>`;
   }
   const heat = $('#yoHeat');
   heat.innerHTML = `<div class="g">${cells}</div>`;
   heat.scrollLeft = heat.scrollWidth;
 
-  const md = S.today.slice(5), mem = [...S.entries.values()].filter(x => x.date.slice(5) === md && x.date < S.today && isWritten(x)).sort((a, b) => a.date < b.date ? 1 : -1);
+  const md = S.today.slice(5), mem = liveEntries().filter(x => x.date.slice(5) === md && x.date < S.today && isWritten(x)).sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : a.at - b.at));
   $('#yoMemCard').hidden = !mem.length;
   const box = $('#yoMem'); box.textContent = '';
   for (const x of mem.slice(0, 4)) {
     const yrs = Number(S.today.slice(0, 4)) - Number(x.date.slice(0, 4));
-    const b = document.createElement('button'); b.className = 'mem'; b.dataset.d = x.date;
-    const h = document.createElement('b'); h.textContent = `Hace ${yrs} ${plural(yrs, 'año', 'años')} · ${fmtShort(x.date)}`;
+    const b = document.createElement('button'); b.className = 'mem'; b.dataset.d = x.date; b.dataset.id = x.id;
+    const h = document.createElement('b'); h.textContent = `Hace ${yrs} ${plural(yrs, 'año', 'años')} · ${fmtShort(x.date)} · ${fmtTime(x.at)}`;
     const p = document.createElement('p'); p.textContent = hasText(x) ? x.text.trim() : '📷 Recuerdo con fotos o videos';
     b.append(h, p); box.append(b);
   }
@@ -1144,46 +1252,131 @@ function renderCalendar() {
   for (let i = 0; i < lead; i++) { const b = document.createElement('div'); b.className = 'day empty'; g.append(b); }
   let wr = 0, pl = 0;
   for (let d = 1; d <= dim; d++) {
-    const k = `${S.calY}-${pad(S.calM + 1)}-${pad(d)}`, e = S.entries.get(k);
+    const k = `${S.calY}-${pad(S.calM + 1)}-${pad(d)}`, e = dIdx(k);
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'day' + (k === S.today ? ' today' : '') + (k === S.sel ? ' sel' : ''); b.dataset.d = k;
-    b.setAttribute('aria-label', fmtLong(k) + (e && hasText(e) ? ', con texto' : '') + (e && hasMedia(e) ? ', con fotos o videos' : '') + (e && e.pill ? ', pastilla tomada' : ''));
-    b.innerHTML = `<span>${d}</span><span class="ind">${e && hasText(e) ? '<i></i>' : ''}${e && hasMedia(e) ? '<i class="m"></i>' : ''}${e && e.pill ? '<i class="p"></i>' : ''}</span>`;
+    b.setAttribute('aria-label', fmtLong(k) + (e.n ? `, ${e.n} ${plural(e.n, 'entrada', 'entradas')}` : '') + (e.media ? ', con fotos o videos' : '') + (e.pill ? ', pastilla tomada' : ''));
+    b.innerHTML = `<span>${d}</span><span class="ind">${e.text ? '<i></i>' : ''}${e.media ? '<i class="m"></i>' : ''}${e.pill ? '<i class="p"></i>' : ''}</span>`;
     g.append(b);
-    if (e && isWritten(e)) wr++;
-    if (e && e.pill) pl++;
+    wr += e.written;
+    if (e.pill) pl++;
   }
-  $('#calSum').innerHTML = `<span>● ${wr} ${plural(wr, 'día con entrada', 'días con entrada')}</span><span>💊 ${pl} ${plural(pl, 'día', 'días')} con pastilla</span>`;
+  $('#calSum').innerHTML = `<span>● ${wr} ${plural(wr, 'entrada', 'entradas')}</span><span>💊 ${pl} ${plural(pl, 'día', 'días')} con pastilla</span>`;
 }
 
+const entryState = e => {
+  if ((e.text || '').length > MAX_TEXTO) return '⚠ Demasiado largo para sincronizar';
+  return e.dirty ? (configured() ? '● Guardado aquí · por sincronizar' : '✓ Guardado en este dispositivo') : (configured() && S.sync.lastOk ? '✓ Sincronizado' : '✓ Guardado en este dispositivo');
+};
+const cardOf = id => $(`#entries .entry[data-id="${id}"]`);
 function renderSaveState(txt) {
-  const e = getE(S.sel), el = $('#saveState');
-  if (txt) { el.textContent = txt; return; }
-  if ($('#edText').value.length > MAX_TEXTO) el.textContent = '⚠ Demasiado largo para sincronizar';
-  else el.textContent = e.dirty ? (configured() ? '● Guardado aquí · por sincronizar' : '✓ Guardado en este dispositivo') : (configured() && S.sync.lastOk ? '✓ Sincronizado' : '✓ Guardado en este dispositivo');
+  for (const c of $$('#entries .entry')) {
+    const e = getE(c.dataset.id), el = $('.en-state', c);
+    if (!e || !el) continue;
+    const ta = $('.en-text', c);
+    el.textContent = txt || entryState(ta && ta.value.length > MAX_TEXTO ? { ...e, text: ta.value } : e);
+  }
 }
 function renderEditorMeta() {
-  const e = getE(S.sel), diff = dayNum(S.sel) - dayNum(S.today);
+  const diff = dayNum(S.sel) - dayNum(S.today), d = getDay(S.sel);
   $('#edDate').textContent = fmtLong(S.sel);
-  $('#edSub').textContent = diff === 0 ? 'Hoy' : diff === -1 ? 'Ayer' : diff === 1 ? 'Mañana' : diff < 0 ? `Hace ${-diff} días` : `Dentro de ${diff} días`;
-  $$('#moodRow button').forEach(b => b.setAttribute('aria-checked', String(Number(b.dataset.m) === e.mood)));
-  $('#pillBtn').setAttribute('aria-pressed', String(e.pill));
-  $('#pillSub').textContent = e.pill ? 'Tomada ✓' : 'Pendiente';
-  $('#wordCount').textContent = `${words($('#edText').value)} palabras`;
+  const n = dayEntries(S.sel).filter(isWritten).length;
+  $('#edSub').textContent = (diff === 0 ? 'Hoy' : diff === -1 ? 'Ayer' : diff === 1 ? 'Mañana' : diff < 0 ? `Hace ${-diff} días` : `Dentro de ${diff} días`) + (n ? ` · ${n} ${plural(n, 'entrada', 'entradas')}` : '');
+  $('#pillBtn').setAttribute('aria-pressed', String(d.pill));
+  $('#pillSub').textContent = d.pill ? 'Tomada ✓' : 'Pendiente';
   $('#dayToday').disabled = S.sel === S.today;
+  for (const c of $$('#entries .entry')) {
+    const e = getE(c.dataset.id); if (!e) continue;
+    $$('.mood-row button', c).forEach(b => b.setAttribute('aria-checked', String(Number(b.dataset.m) === e.mood)));
+    const ta = $('.en-text', c); $('.en-words', c).textContent = `${words(ta.value)} palabras`;
+    const ti = $('.en-time', c), di = $('.en-date', c);
+    if (document.activeElement !== ti) ti.value = timeInput(e.at);
+    if (document.activeElement !== di) di.value = e.date;
+  }
   renderSaveState();
 }
 function autoGrow(ta) { ta.style.height = 'auto'; ta.style.height = Math.max(ta.scrollHeight + 4, parseInt(getComputedStyle(ta).minHeight) || 0) + 'px'; }
-function loadDay(date) {
+
+/** Quita entradas vacías que nunca se guardaron (por ejemplo, tocaste «Nueva entrada» y no escribiste nada). */
+function purgeEmpty(keep) {
+  for (const e of [...S.entries.values()]) {
+    if (e.del || e.dirty || e.baseT || e.id === keep || hasText(e) || e.media.length) continue;
+    S.entries.delete(e.id); dbDel('entries', e.id).catch(() => {});
+  }
+}
+function disposeEntries() {
+  for (const g of $$('#entries .en-gallery')) {
+    releaseMedia(g); (g._urls || []).forEach(u => URL.revokeObjectURL(u)); g._urls = []; g._gen = (g._gen || 0) + 1;
+  }
+}
+function renderGalleryEl(g, e) {
+  releaseMedia(g);
+  (g._urls || []).forEach(u => URL.revokeObjectURL(u)); g._urls = [];
+  const gen = g._gen = (g._gen || 0) + 1, track = u => { if (gen !== g._gen) return false; g._urls.push(u); return true; };
+  g.textContent = '';
+  liveMedia(e).forEach((m, i) => g.append(makeTile(m, { del: true, track, owner: e.id, open: () => openLightbox(e.id, i) })));
+}
+function renderGalleryFor(id) { const c = cardOf(id), e = getE(id); if (c && e) renderGalleryEl($('.en-gallery', c), e); }
+
+function buildEntryCard(e) {
+  const c = document.createElement('div');
+  c.className = 'entry'; c.dataset.id = e.id;
+  c.innerHTML = `<div class="en-head">
+      <input type="time" class="en-time" aria-label="Hora de la entrada">
+      <input type="date" class="en-date" aria-label="Fecha de la entrada">
+      <span class="en-state muted sm"></span>
+      <button type="button" class="ib en-del" aria-label="Eliminar entrada" title="Eliminar entrada">🗑</button>
+    </div>
+    <div class="mood-row" role="radiogroup" aria-label="Ánimo de esta entrada">
+      <span class="muted">Ánimo</span>
+      <button type="button" role="radio" data-m="1" aria-label="Muy mal" aria-checked="false">😞</button>
+      <button type="button" role="radio" data-m="2" aria-label="Mal" aria-checked="false">😕</button>
+      <button type="button" role="radio" data-m="3" aria-label="Normal" aria-checked="false">😐</button>
+      <button type="button" role="radio" data-m="4" aria-label="Bien" aria-checked="false">🙂</button>
+      <button type="button" role="radio" data-m="5" aria-label="Muy bien" aria-checked="false">😄</button>
+    </div>
+    <textarea class="en-text" placeholder="¿Qué pasó?" spellcheck="true" aria-label="Texto de la entrada"></textarea>
+    <div class="ed-meta"><span class="en-words"></span></div>
+    <div class="media-bar">
+      <label class="btn">📷 Foto o video<input class="en-file" type="file" accept="image/*,video/*" multiple hidden></label>
+      <label class="btn only-touch">📸 Cámara<input class="en-cam" type="file" accept="image/*" capture="environment" hidden></label>
+    </div>
+    <div class="gallery en-gallery"></div>`;
+  const ta = $('.en-text', c); ta.value = e.text;
+  $('.en-time', c).value = timeInput(e.at); $('.en-date', c).value = e.date;
+  return c;
+}
+/** Dibuja todas las entradas del día seleccionado. */
+function renderDay(focusId) {
+  disposeEntries();
+  const box = $('#entries'); box.textContent = '';
+  let list = dayEntries(S.sel);
+  if (!list.length) { const e = blankEntry(S.sel); e.tAt = stamp(0); S.entries.set(e.id, e); dbPut('entries', e.id, e).catch(() => {}); list = [e]; }
+  for (const e of list) {
+    const c = buildEntryCard(e); box.append(c);
+    autoGrow($('.en-text', c)); renderGalleryEl($('.en-gallery', c), e);
+  }
+  renderCalendar(); renderEditorMeta();
+  if (focusId) { const c = cardOf(focusId); if (c) { c.scrollIntoView({ block: 'center', behavior: 'smooth' }); $('.en-text', c).focus(); } }
+}
+function loadDay(date, focusId) {
   S.sel = date;
   const d = parseKey(date); S.calY = d.getFullYear(); S.calM = d.getMonth();
-  const ta = $('#edText'); ta.value = getE(date).text; autoGrow(ta);
-  renderCalendar(); renderEditorMeta(); renderGallery();
+  purgeEmpty();
+  renderDay(focusId);
 }
-function selectDay(date) {
+function selectDay(date, focusId) {
   saveDraft.flush();
-  loadDay(date);
+  loadDay(date, focusId);
   $('#calCol').classList.remove('open');
+}
+/** Botón «Nueva entrada»: crea una entrada con la hora actual (o enfoca la vacía que ya exista). */
+async function addEntryToDay() {
+  saveDraft.flush();
+  const empty = dayEntries(S.sel).find(e => !isWritten(e) && !e.mood);
+  if (empty) { renderDay(empty.id); return; }
+  const e = await newEntry(S.sel);
+  renderDay(e.id);
 }
 
 // Un <video> desconectado del DOM sigue pidiendo su blob: hay que soltarle el src ANTES de revocar la URL
@@ -1191,7 +1384,6 @@ function releaseMedia(root) {
   if (!root) return;
   root.querySelectorAll('video').forEach(v => { try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) {} });
 }
-let galUrls = [], galGen = 0;
 function placeholder(t, msg) {
   let ph = $('.ph', t); if (!ph) { ph = document.createElement('div'); ph.className = 'ph'; t.append(ph); }
   ph.textContent = msg;
@@ -1214,7 +1406,7 @@ async function fillTile(t, m, track) {
   } else { el = document.createElement('img'); el.src = url; el.alt = ''; el.decoding = 'async'; }
   t.prepend(el);
 }
-function makeTile(m, { del = false, track, open } = {}) {
+function makeTile(m, { del = false, track, open, owner } = {}) {
   const t = document.createElement('div');
   t.className = 'tile'; t.dataset.id = m.id; t.tabIndex = 0; t.setAttribute('role', 'button');
   t.setAttribute('aria-label', m.type === 'video' ? 'Abrir video' : 'Abrir foto');
@@ -1222,18 +1414,11 @@ function makeTile(m, { del = false, track, open } = {}) {
   t.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); if (open) open(); } });
   if (del) {
     const x = document.createElement('button'); x.className = 'del'; x.type = 'button'; x.textContent = '✕'; x.setAttribute('aria-label', 'Quitar de la entrada');
-    x.addEventListener('click', ev => { ev.stopPropagation(); if (confirm('¿Quitar este archivo de la entrada?')) removeMedia(S.sel, m.id).then(renderGallery); });
+    x.addEventListener('click', ev => { ev.stopPropagation(); if (confirm('¿Quitar este archivo de la entrada?')) removeMedia(owner, m.id).then(() => renderGalleryFor(owner)); });
     t.append(x);
   }
   fillTile(t, m, track);
   return t;
-}
-function renderGallery() {
-  releaseMedia($('#gallery'));
-  galUrls.forEach(u => URL.revokeObjectURL(u)); galUrls = [];
-  const gen = ++galGen, trackG = u => { if (gen !== galGen) return false; galUrls.push(u); return true; };
-  const g = $('#gallery'); g.textContent = '';
-  liveMedia(getE(S.sel)).forEach((m, i) => g.append(makeTile(m, { del: true, track: trackG, open: () => openLightbox(S.sel, i) })));
 }
 
 /* ═══════════════ HISTORIAL ═══════════════ */
@@ -1261,9 +1446,9 @@ function renderHistorial() {
   const h = S.hist, q = norm(h.q.trim());
   $$('#histFilter button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.f === h.filter)));
   $$('#histMode button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.m === h.mode)));
-  let list = [...S.entries.values()].filter(e => h.filter === 'text' ? hasText(e) : h.filter === 'media' ? hasMedia(e) : isWritten(e));
+  let list = liveEntries().filter(e => h.filter === 'text' ? hasText(e) : h.filter === 'media' ? hasMedia(e) : isWritten(e));
   if (q) list = list.filter(e => norm(e.text).includes(q));
-  list.sort((a, b) => a.date < b.date ? 1 : -1);
+  list.sort((a, b) => -byTime(a, b));
   const body = $('#histBody'); body.textContent = '';
   let more = false;
   if (!list.length) {
@@ -1271,16 +1456,16 @@ function renderHistorial() {
   } else if (h.mode === 'list') {
     const wrap = document.createElement('div'); wrap.className = 'hlist';
     for (const e of list.slice(0, h.limit)) {
-      const c = document.createElement('div'); c.className = 'hcard'; c.dataset.d = e.date; c.tabIndex = 0; c.setAttribute('role', 'link');
+      const c = document.createElement('div'); c.className = 'hcard'; c.dataset.d = e.date; c.dataset.id = e.id; c.tabIndex = 0; c.setAttribute('role', 'link');
       const hh = document.createElement('div'); hh.className = 'hh';
-      const a = document.createElement('span'); a.textContent = fmtShort(e.date);
-      const b = document.createElement('span'); b.textContent = (MOODS[e.mood] || '') + (e.pill ? ' 💊' : '');
+      const a = document.createElement('span'); a.textContent = fmtShort(e.date) + ' · ' + fmtTime(e.at);
+      const b = document.createElement('span'); b.textContent = MOODS[e.mood] || '';
       hh.append(a, b); c.append(hh);
       const p = document.createElement('p'); p.append(...(hasText(e) ? snippetNodes(e.text, q) : [document.createTextNode('📷 Solo fotos o videos')])); c.append(p);
       const ms = liveMedia(e);
       if (ms.length) {
         const hm = document.createElement('div'); hm.className = 'hm';
-        ms.slice(0, 4).forEach((m, i) => hm.append(makeTile(m, { track: trackH, open: () => { selectDay(e.date); goView('diario'); openLightbox(e.date, i); } })));
+        ms.slice(0, 4).forEach((m, i) => hm.append(makeTile(m, { track: trackH, open: () => { selectDay(e.date); goView('diario'); openLightbox(e.id, i); } })));
         c.append(hm);
       }
       wrap.append(c);
@@ -1290,7 +1475,7 @@ function renderHistorial() {
     const items = [];
     for (const e of list) liveMedia(e).forEach((m, i) => items.push({ e, m, i }));
     const g = document.createElement('div'); g.className = 'ggrid';
-    for (const it of items.slice(0, h.limit * 2)) g.append(makeTile(it.m, { track: trackH, open: () => { selectDay(it.e.date); goView('diario'); openLightbox(it.e.date, it.i); } }));
+    for (const it of items.slice(0, h.limit * 2)) g.append(makeTile(it.m, { track: trackH, open: () => { selectDay(it.e.date); goView('diario'); openLightbox(it.e.id, it.i); } }));
     if (!items.length) body.innerHTML = '<div class="empty-state"><div class="big">📷</div><p>Aún no hay fotos ni videos. Agrégalos desde el Diario.</p></div>';
     else body.append(g);
     more = items.length > h.limit * 2;
@@ -1302,7 +1487,8 @@ function renderHistorial() {
 function renderSyncInfo() {
   const n = pendingCount(), lines = [];
   lines.push(configured() ? (S.sync.lastOk ? 'Última sincronización: ' + new Date(S.sync.lastOk).toLocaleString('es-CL') : 'Conectado. Aún no se ha sincronizado.') : 'Sin conectar: todo se guarda solo en este dispositivo.');
-  if (configured()) lines.push(`${n} ${plural(n, 'día pendiente', 'días pendientes')} de subir · ${S.entries.size} ${plural(S.entries.size, 'día', 'días')} en este dispositivo`);
+  const ne = liveEntries().filter(isWritten).length;
+  if (configured()) lines.push(`${n} ${plural(n, 'cambio pendiente', 'cambios pendientes')} de subir · ${ne} ${plural(ne, 'entrada', 'entradas')} en este dispositivo`);
   if (S.sync.err) lines.push('⚠ ' + S.sync.err);
   $('#cfgSyncInfo').innerHTML = lines.map(esc).join('<br>');
 }
@@ -1333,11 +1519,11 @@ function renderConfig() {
 }
 
 /* ═══════════════ visor (lightbox) ═══════════════ */
-const LB = { date: null, list: [], i: 0, url: null, open: false };
-function openLightbox(date, i) {
-  const list = liveMedia(getE(date));
+const LB = { id: null, list: [], i: 0, url: null, open: false };
+function openLightbox(id, i) {
+  const e = getE(id), list = e ? liveMedia(e) : [];
   if (!list.length) return;
-  LB.date = date; LB.list = list; LB.i = Math.max(0, Math.min(i, list.length - 1));
+  LB.id = id; LB.list = list; LB.i = Math.max(0, Math.min(i, list.length - 1));
   if (!LB.open) { LB.open = true; $('#lightbox').classList.add('open'); document.body.style.overflow = 'hidden'; try { history.pushState({ lb: 1 }, ''); } catch (e) {} }
   showLb();
 }
@@ -1354,7 +1540,8 @@ async function showLb() {
   releaseMedia(stage);
   if (LB.url) { URL.revokeObjectURL(LB.url); LB.url = null; }
   stage.textContent = '';
-  $('#lbTitle').textContent = `${fmtShort(LB.date)} · ${LB.i + 1} / ${LB.list.length}`;
+  const le = getE(LB.id);
+  $('#lbTitle').textContent = `${le ? fmtShort(le.date) + ' · ' + fmtTime(le.at) : ''} · ${LB.i + 1} / ${LB.list.length}`;
   if (LB.list.length > 1) for (const [cls, txt, d] of [['lb-prev', '‹', -1], ['lb-next', '›', 1]]) {
     const b = document.createElement('button'); b.className = 'lb-btn lb-nav ' + cls; b.textContent = txt; b.setAttribute('aria-label', d < 0 ? 'Anterior' : 'Siguiente');
     b.onclick = ev => { ev.stopPropagation(); lbStep(d); }; stage.append(b);
@@ -1373,13 +1560,17 @@ async function showLb() {
   el.src = LB.url;
   if (m.type === 'video') { el.controls = true; el.playsInline = true; el.autoplay = true; } else el.alt = '';
   stage.prepend(el);
-  const tile = $(`.tile[data-id="${m.id}"]`); if (tile && !$('img,video', tile)) { /* refresca miniatura recién descargada */ renderGallery(); }
+  const tile = $(`.tile[data-id="${m.id}"]`); if (tile && !$('img,video', tile) && LB.id) renderGalleryFor(LB.id);
 }
 function lbStep(d) { if (LB.list.length < 2) return; LB.i = (LB.i + d + LB.list.length) % LB.list.length; showLb(); }
 
 /* ═══════════════ navegación y eventos ═══════════════ */
 const VIEWS = { yo: ['Hoja de personaje', 'Tu progreso y las misiones de hoy'], diario: ['Diario', ''], historial: ['Historial', 'Busca entre tus recuerdos'], config: ['Ajustes', ''] };
-const saveDraft = debounce(() => { setText(S.draftDate || S.sel, $('#edText').value).catch(() => {}); }, 600);
+const saveDraft = debounce(() => {
+  const id = S.draftId; if (!id) return;
+  const c = cardOf(id), t = c ? $('.en-text', c).value : S.draftText;
+  setText(id, t).catch(() => {});
+}, 600);
 
 function goView(v) {
   if (!VIEWS[v]) v = 'yo';
@@ -1404,8 +1595,9 @@ async function persistApi() {
     S.sync.cursor = 0; S.sync.lastOk = 0; await saveSyncMeta();
     for (const e of S.entries.values()) {
       for (const m of e.media) if (m.remoteId && await dbHas('blobs', m.id)) m.remoteId = '';
-      e.dirty = true; await dbPut('entries', e.date, e);
+      e.dirty = true; e.baseT = 0; await dbPut('entries', e.id, e);
     }
+    for (const d of S.days.values()) { d.dirty = true; await dbPut('days', d.date, d); }
   }
   paintSync(); renderSyncInfo();
   if (configured()) scheduleSync(500);
@@ -1419,11 +1611,15 @@ function bind() {
   $('#yoQuests').addEventListener('click', ev => {
     const q = ev.target.closest('.quest'); if (!q) return;
     const a = q.dataset.a;
-    if (a === 'pill') setPill(S.today, !getE(S.today).pill);
-    else { selectDay(S.today); goView('diario'); if (a === 'write') $('#edText').focus(); else $('#fileAny').click(); }
+    if (a === 'pill') setPill(S.today, !getDay(S.today).pill);
+    else {
+      selectDay(S.today); goView('diario');
+      const cards = $$('#entries .entry'), last = cards[cards.length - 1];
+      if (last) { if (a === 'write') $('.en-text', last).focus(); else $('.en-file', last).click(); }
+    }
   });
-  $('#yoWeek').addEventListener('click', ev => { const b = ev.target.closest('button[data-d]'); if (b) setPill(b.dataset.d, !getE(b.dataset.d).pill); });
-  $('#yoMem').addEventListener('click', ev => { const b = ev.target.closest('.mem'); if (b) { selectDay(b.dataset.d); goView('diario'); } });
+  $('#yoWeek').addEventListener('click', ev => { const b = ev.target.closest('button[data-d]'); if (b) setPill(b.dataset.d, !getDay(b.dataset.d).pill); });
+  $('#yoMem').addEventListener('click', ev => { const b = ev.target.closest('.mem'); if (b) { selectDay(b.dataset.d, b.dataset.id); goView('diario'); } });
 
   $('#calPrev').addEventListener('click', () => { S.calM--; if (S.calM < 0) { S.calM = 11; S.calY--; } renderCalendar(); });
   $('#calNext').addEventListener('click', () => { S.calM++; if (S.calM > 11) { S.calM = 0; S.calY++; } renderCalendar(); });
@@ -1434,26 +1630,59 @@ function bind() {
   $('#dayNext').addEventListener('click', () => selectDay(addDays(S.sel, 1)));
   $('#dayToday').addEventListener('click', () => selectDay(S.today));
 
-  $('#moodRow').addEventListener('click', ev => { const b = ev.target.closest('button[data-m]'); if (!b) return; const m = Number(b.dataset.m); setMood(S.sel, getE(S.sel).mood === m ? 0 : m); });
-  $('#pillBtn').addEventListener('click', () => setPill(S.sel, !getE(S.sel).pill));
+  $('#pillBtn').addEventListener('click', () => setPill(S.sel, !getDay(S.sel).pill));
+  $('#newEntry').addEventListener('click', () => addEntryToDay());
 
-  const ta = $('#edText');
-  ta.addEventListener('input', () => {
-    S.draftDate = S.sel; autoGrow(ta);
-    $('#wordCount').textContent = `${words(ta.value)} palabras`;
-    renderSaveState(ta.value.length > MAX_TEXTO ? '⚠ Demasiado largo para sincronizar' : '… escribiendo');
+  const box = $('#entries'), idOf = el => { const c = el.closest('.entry'); return c && c.dataset.id; };
+  box.addEventListener('click', ev => {
+    const id = idOf(ev.target); if (!id) return;
+    const mb = ev.target.closest('.mood-row button[data-m]');
+    if (mb) { const m = Number(mb.dataset.m), e = getE(id); setMood(id, e && e.mood === m ? 0 : m); return; }
+    if (ev.target.closest('.en-del')) {
+      const e = getE(id);
+      if (e && (isWritten(e) || e.mood) && !confirm('¿Eliminar esta entrada y sus fotos o videos? No se puede deshacer.')) return;
+      saveDraft.flush();
+      deleteEntry(id).then(() => { renderDay(); toast('Entrada eliminada'); });
+    }
+  });
+  box.addEventListener('input', ev => {
+    const ta = ev.target.closest('.en-text'); if (!ta) return;
+    const id = idOf(ta);
+    if (S.draftId && S.draftId !== id) saveDraft.flush();
+    S.draftId = id; S.draftText = ta.value; autoGrow(ta);
+    $('.en-words', ta.closest('.entry')).textContent = `${words(ta.value)} palabras`;
+    renderSaveState('… escribiendo');
+    if (ta.value.length > MAX_TEXTO) $('.en-state', ta.closest('.entry')).textContent = '⚠ Demasiado largo para sincronizar';
     saveDraft();
   });
-  ta.addEventListener('blur', () => saveDraft.flush());
-  ta.addEventListener('paste', ev => {
+  box.addEventListener('focusout', ev => { if (ev.target.closest('.en-text')) saveDraft.flush(); });
+  box.addEventListener('paste', ev => {
+    const ta = ev.target.closest('.en-text'); if (!ta) return;
     const fs = Array.from((ev.clipboardData && ev.clipboardData.files) || []).filter(f => /^(image|video)\//.test(f.type));
-    if (fs.length) { ev.preventDefault(); addFiles(S.sel, fs); }
+    if (fs.length) { ev.preventDefault(); addFiles(idOf(ta), fs); }
   });
-  for (const id of ['#fileAny', '#fileCam']) $(id).addEventListener('change', ev => { const fs = Array.from(ev.target.files || []); ev.target.value = ''; addFiles(S.sel, fs); });
+  box.addEventListener('change', async ev => {
+    const t = ev.target, id = idOf(t); if (!id) return;
+    if (t.matches('.en-file, .en-cam')) { const fs = Array.from(t.files || []); t.value = ''; addFiles(id, fs); return; }
+    if (t.matches('.en-time, .en-date')) {
+      const c = t.closest('.entry'), date = $('.en-date', c).value, hhmm = $('.en-time', c).value;
+      if (!date || !hhmm) { renderEditorMeta(); return; }
+      saveDraft.flush();
+      await setWhen(id, date, hhmm);
+      if (date !== S.sel) {
+        renderDay();
+        toast(`Entrada movida al ${fmtShort(date)}`, { label: 'Ir allí', fn: () => selectDay(date, id) });
+      } else renderDay(id);
+    }
+  });
   const card = $('#edCard');
   card.addEventListener('dragover', ev => { if (ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files')) { ev.preventDefault(); card.classList.add('drop-on'); } });
   card.addEventListener('dragleave', () => card.classList.remove('drop-on'));
-  card.addEventListener('drop', ev => { ev.preventDefault(); card.classList.remove('drop-on'); addFiles(S.sel, Array.from(ev.dataTransfer.files || [])); });
+  card.addEventListener('drop', ev => {
+    ev.preventDefault(); card.classList.remove('drop-on');
+    const cs = $$('#entries .entry'), c = ev.target.closest ? ev.target.closest('.entry') : null, target = c || cs[cs.length - 1];
+    if (target) addFiles(target.dataset.id, Array.from(ev.dataTransfer.files || []));
+  });
   $('#saveBtn').addEventListener('click', async () => {
     saveDraft.flush(); await Promise.resolve();
     if (configured()) syncNow(true).then(ok => { if (ok) toast('Guardado y sincronizado ✓'); }); else toast('Guardado en este dispositivo ✓');
@@ -1464,8 +1693,8 @@ function bind() {
   $('#histFilter').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b) { S.hist.filter = b.dataset.f; S.hist.limit = 30; renderHistorial(); } });
   $('#histMode').addEventListener('click', ev => { const b = ev.target.closest('button'); if (b) { S.hist.mode = b.dataset.m; S.hist.limit = 30; renderHistorial(); } });
   $('#histMore').addEventListener('click', () => { S.hist.limit += 30; renderHistorial(); });
-  $('#histBody').addEventListener('click', ev => { const c = ev.target.closest('.hcard'); if (c) { selectDay(c.dataset.d); goView('diario'); } });
-  $('#histBody').addEventListener('keydown', ev => { if (ev.key === 'Enter') { const c = ev.target.closest('.hcard'); if (c) { selectDay(c.dataset.d); goView('diario'); } } });
+  $('#histBody').addEventListener('click', ev => { const c = ev.target.closest('.hcard'); if (c) { selectDay(c.dataset.d, c.dataset.id); goView('diario'); } });
+  $('#histBody').addEventListener('keydown', ev => { if (ev.key === 'Enter') { const c = ev.target.closest('.hcard'); if (c) { selectDay(c.dataset.d, c.dataset.id); goView('diario'); } } });
 
   /* ajustes */
   const seg = (sel, key, parse = x => x) => $(sel).addEventListener('click', ev => { const b = ev.target.closest('button'); if (!b) return; S.cfg[key] = parse(b.dataset.v); saveCfg(); applyTheme(); renderConfig(); renderLive(); });
@@ -1486,7 +1715,7 @@ function bind() {
     try {
       const j = await api('ping', {}, { apiUrl: S.cfg.apiUrl, apiKey: S.cfg.apiKey, device: S.cfg.device });
       const skew = Math.abs(Date.now() - j.serverTime);
-      toast(`✓ Conectado · ${j.entradas} ${plural(j.entradas, 'día', 'días')} en la hoja${skew > 120000 ? ` · ⚠ el reloj de este dispositivo está desfasado ${Math.round(skew / 60000)} min` : ''}`);
+      toast(`✓ Conectado · ${j.entradas} ${plural(j.entradas, 'entrada', 'entradas')} en la hoja${skew > 120000 ? ` · ⚠ el reloj de este dispositivo está desfasado ${Math.round(skew / 60000)} min` : ''}`);
     } catch (err) { toast('✗ ' + err.message); }
   });
   $('#cfgSyncNow').addEventListener('click', async () => { await persistApi(); syncNow(true).then(ok => { if (ok) toast('Sincronizado ✓'); }); });
@@ -1500,13 +1729,13 @@ function bind() {
     try {
       const { zip, count, noLocal } = await exportAll();
       saveAs(zip, `diario-vida-${todayKey()}.zip`);
-      toast(`Respaldo listo: ${count} ${plural(count, 'día', 'días')}${noLocal ? ` (${noLocal} archivos no estaban descargados en este dispositivo)` : ''}.`);
+      toast(`Respaldo listo: ${count} ${plural(count, 'entrada', 'entradas')}${noLocal ? ` (${noLocal} archivos no estaban descargados en este dispositivo)` : ''}.`);
     } catch (err) { toast('No se pudo exportar: ' + err.message); }
   });
   $('#cfgImportFile').addEventListener('change', async ev => {
     const f = ev.target.files[0]; ev.target.value = '';
     if (!f) return;
-    try { const r = await importFile(f); toast(`Importado: ${r.nE} ${plural(r.nE, 'día', 'días')}, ${r.nM} ${plural(r.nM, 'archivo', 'archivos')}${r.missing ? ` (${r.missing} sin archivo)` : ''}.`); }
+    try { const r = await importFile(f); toast(`Importado: ${r.nE} ${plural(r.nE, 'entrada', 'entradas')}, ${r.nM} ${plural(r.nM, 'archivo', 'archivos')}${r.missing ? ` (${r.missing} sin archivo)` : ''}.`); }
     catch (err) { toast('No se pudo importar: ' + err.message); }
   });
 
@@ -1516,11 +1745,13 @@ function bind() {
   $('#lbSave').addEventListener('click', async () => {
     const m = LB.list[LB.i]; if (!m) return;
     const b = await getBlob(m.id); if (!b) return toast('Aún no está descargado.');
-    saveAs(b, `${LB.date}_${LB.i + 1}.${extOf(m.mime, m.name)}`);
+    const le = getE(LB.id);
+    saveAs(b, `${le ? le.date : 'diario'}_${LB.i + 1}.${extOf(m.mime, m.name)}`);
   });
   $('#lbDel').addEventListener('click', async () => {
     const m = LB.list[LB.i]; if (!m || !confirm('¿Quitar este archivo de la entrada?')) return;
-    await removeMedia(LB.date, m.id); closeLightbox(); if (S.view === 'diario') renderGallery();
+    const oid = LB.id;
+    await removeMedia(oid, m.id); closeLightbox(); if (S.view === 'diario') renderGalleryFor(oid);
   });
   let sx = null;
   $('#lbStage').addEventListener('touchstart', ev => { sx = ev.touches[0].clientX; }, { passive: true });
@@ -1543,8 +1774,7 @@ function bind() {
 /* ═══════════════ recordatorio y reloj ═══════════════ */
 async function maybeNotify() {
   if (!S.cfg.remOn || !('Notification' in window) || Notification.permission !== 'granted') return;
-  const e = S.entries.get(S.today);
-  if ((e && e.pill) || new Date().getHours() < S.cfg.remHour) return;
+  if (getDay(S.today).pill || new Date().getHours() < S.cfg.remHour) return;
   if ((await dbGet('meta', 'notified')) === S.today) return;
   await dbPut('meta', 'notified', S.today);
   const title = '💊 ¿Ya tomaste tu pastilla?', opts = { body: 'Márcala en tu Diario de Vida.', tag: 'pill' };
@@ -1558,8 +1788,8 @@ function tick() {
   if (t !== S.today) {
     const wasToday = S.sel === S.today;
     S.today = t; if (wasToday) S.sel = t;
-    S.stats = computeStats(S.entries, S.today); $('#banner').hidden = true;
-    renderLive();
+    $('#banner').hidden = true;
+    refreshDerived();
     if (S.view === 'diario' && wasToday) loadDay(S.sel);
   }
   renderBanner(); maybeNotify();
@@ -1572,9 +1802,9 @@ async function dbAllKV(store) {
   const [keys, vals] = await Promise.all([reqP(s.getAllKeys()), reqP(s.getAll())]);
   return keys.map((k, i) => [k, vals[i]]);
 }
-async function migrateV1() {
+async function migrateV1() {   // versión 1 (HTML suelto) → entradas por fecha (v2)
   for (const [date, old] of await dbAllKV('entries')) {
-    if (!old || old.v === 2 || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    if (!old || old.v === 2 || old.v === 3 || !/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
     const now = Date.now(), media = [];
     const olds = (old.media || []).filter(m => m && m.blob);
     for (const x of (old.images || []).concat(old.image ? [old.image] : [])) { const b = dataUrlToBlob(x); if (b) olds.push({ type: 'image', blob: b }); }
@@ -1583,8 +1813,29 @@ async function migrateV1() {
       const id = uid(); await dbPut('blobs', id, m.blob);
       media.push({ id, type: m.type === 'video' ? 'video' : 'image', mime: m.blob.type || '', name: '', size: m.blob.size, at: now + k++, remoteId: '' });
     }
-    await dbPut('entries', date, { ...blankEntry(date), text: old.text || '', tText: old.text ? now : 0, pill: !!old.pill, tPill: old.pill ? now : 0, media, dirty: true, rev: 1 });
+    await dbPut('entries', date, { v: 2, date, text: old.text || '', tText: old.text ? now : 0, mood: 0, tMood: 0, pill: !!old.pill, tPill: old.pill ? now : 0, media, dirty: true, rev: 1, baseT: 0 });
   }
+}
+/** Versión 2 (una entrada por fecha) → versión 3 (varias por día + pastilla por día). Devuelve true si migró algo. */
+async function migrateV2() {
+  let moved = false;
+  for (const [key, e] of await dbAllKV('entries')) {
+    if (!e || e.v === 3 || !/^\d{4}-\d{2}-\d{2}$/.test(String(key))) continue;
+    moved = true;
+    const date = e.date || key;
+    if (e.pill) {
+      const cur = await dbGet('days', date);
+      if (!cur || (cur.tPill || 0) < (e.tPill || 0)) await dbPut('days', date, { ...blankDay(date), pill: true, tPill: e.tPill || 1, dirty: true, rev: 1 });
+    }
+    const hasMedia2 = (e.media || []).some(m => !m.deleted);
+    if ((e.text || '').trim() || hasMedia2 || e.mood || (e.media || []).length) {
+      // id fijo por fecha: así todos tus dispositivos convergen en la misma entrada
+      const id = 'legacy-' + date;
+      await dbPut('entries', id, { ...blankEntry(date, atFrom(date, '12:00'), id), tAt: 1, text: e.text || '', tText: e.tText || 0, mood: e.mood || 0, tMood: e.tMood || 0, media: e.media || [], dirty: true, rev: 1, baseT: 0 });
+    }
+    await dbDel('entries', key);
+  }
+  return moved;
 }
 
 /* ═══════════════ inicio ═══════════════ */
@@ -1598,15 +1849,18 @@ async function init() {
   const sy = await dbGet('meta', 'sync');
   if (sy) { S.sync.cursor = sy.cursor || 0; S.sync.lastOk = sy.lastOk || 0; }
   await migrateV1();
-  for (const [date, e] of await dbAllKV('entries')) if (e && e.v === 2) S.entries.set(date, e);
+  if (await migrateV2()) { S.sync.cursor = 0; await saveSyncMeta(); }   // el servidor nuevo usa otro formato: se vuelve a sincronizar todo
+  for (const [id, e] of await dbAllKV('entries')) if (e && e.v === 3) S.entries.set(id, e);
+  for (const [date, d] of await dbAllKV('days')) if (d && d.v === 3) S.days.set(date, d);
   S.today = todayKey(); S.sel = S.today;
-  S.stats = computeStats(S.entries, S.today);
+  purgeEmpty();
+  S.idx = buildIndex(S.entries, S.days); S.stats = computeStats(S.entries, S.days, S.today);
   applyTheme(); bind();
   goView((location.hash || '').slice(1));
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (configured()) setTimeout(() => syncNow(), 700);
   setInterval(tick, 30000);
-  window.__dv = { S, syncNow, goView, selectDay, exportAll, importFile, getBlob, pendingCount, setText, setMood, setPill, removeMedia, ensureBlob };   // para depurar en la consola
+  window.__dv = { S, syncNow, goView, selectDay, exportAll, importFile, getBlob, pendingCount, newEntry, setText, setMood, setWhen, setPill, deleteEntry, addFiles, removeMedia, ensureBlob, dayEntries, getDay, refreshDerived };   // para depurar en la consola
 }
 init().catch(err => {
   console.error(err);
