@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="noche">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0f1220">
+<title>Ejercicio · Edu HQ</title>
+<style>
+:root{--bg:#0f1220;--card:#181c30;--card2:#20263f;--tx:#e8eaf6;--mut:#9aa3c7;--ac:#7c5cff;--ac2:#2dd4bf;--ok:#34d399;--warn:#fbbf24;--bd:#2a3150}
+[data-theme=dia]{--bg:#f3f4fb;--card:#ffffff;--card2:#eef0fa;--tx:#1b1f3a;--mut:#5b6385;--ac:#6d4aff;--ac2:#0d9488;--ok:#059669;--warn:#b45309;--bd:#d9dcf0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--tx);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:16px;line-height:1.45}
+#app{max-width:520px;margin:0 auto;padding:14px 14px 100px}
+h1{font-size:1.25rem;margin:2px 0 0}
+h2{font-size:1.05rem;margin:0}
+h3{font-size:.95rem;margin:14px 0 6px}
+p{margin:6px 0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:16px;padding:14px;margin-bottom:12px}
+.hero{background:linear-gradient(135deg,var(--card),var(--card2))}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.mut{color:var(--mut)}
+.small{font-size:.82rem}
+.note{background:var(--card2);border-left:3px solid var(--ac2);padding:8px 10px;border-radius:8px;font-size:.88rem;color:var(--tx)}
+.warnbox{border-left-color:var(--warn)}
+.racha{font-weight:700;font-size:1.05rem;white-space:nowrap}
+.bar{height:10px;background:var(--card2);border-radius:99px;overflow:hidden;margin:10px 0 6px}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ac),var(--ac2));border-radius:99px}
+.week{display:flex;justify-content:space-between;gap:4px}
+.week div{flex:1;text-align:center;font-size:.72rem;color:var(--mut)}
+.week b{display:block;font-size:1.15rem;margin-top:2px;color:var(--mut)}
+.week .ok b{color:var(--ok)}
+.week .today b{color:var(--ac2)}
+.btn{display:block;width:100%;min-height:48px;border:1px solid var(--bd);background:var(--card2);color:var(--tx);border-radius:12px;padding:10px 14px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:10px}
+.btn.on{background:var(--ok);border-color:var(--ok);color:#06251a}
+.btn.pri{background:var(--ac);border-color:var(--ac);color:#fff}
+.btn.sm{min-height:40px;width:auto;display:inline-block;font-size:.9rem;margin-top:6px}
+.btn.danger{border-color:#ef4444;color:#ef4444;background:transparent}
+.link{background:none;border:0;color:var(--ac2);font-size:.9rem;cursor:pointer;padding:6px 0;font-weight:600}
+a.link{text-decoration:none;display:inline-block}
+select,input[type=number],input[type=text],input[type=date],textarea{width:100%;min-height:44px;background:var(--card2);color:var(--tx);border:1px solid var(--bd);border-radius:10px;padding:8px 10px;font-size:1rem;font-family:inherit}
+textarea{min-height:70px}
+.ex{border-top:1px solid var(--bd);margin-top:12px;padding-top:10px}
+.set{display:grid;grid-template-columns:28px 1fr 1fr 48px;gap:8px;align-items:center;margin-top:8px}
+.set .n{color:var(--mut);text-align:center;font-weight:700}
+.chk{width:48px;height:44px;border-radius:10px;border:2px solid var(--bd);background:transparent;color:#06251a;font-size:1.2rem;font-weight:800;cursor:pointer}
+.chk.on{background:var(--ok);border-color:var(--ok)}
+.imgs{display:flex;gap:8px;margin:8px 0}
+.imgs img{flex:1;min-width:0;width:50%;border-radius:10px;background:#fff;object-fit:contain;max-height:220px}
+ol,ul{margin:6px 0;padding-left:20px}
+li{margin:4px 0}
+.exhead{display:flex;justify-content:space-between;align-items:center;gap:8px;cursor:pointer;width:100%;background:none;border:0;color:var(--tx);text-align:left;padding:0;font-family:inherit}
+.tag{display:inline-block;background:var(--card2);border:1px solid var(--bd);border-radius:99px;padding:2px 10px;font-size:.78rem;color:var(--mut);margin:2px 4px 2px 0}
+.dayrow{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--bd)}
+.dayrow:first-of-type{border-top:0}
+.dayrow.today{color:var(--ac2);font-weight:700}
+.dayrow .mut{text-align:right}
+.hist{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid var(--bd)}
+iframe{width:100%;aspect-ratio:16/9;border:0;border-radius:10px;margin-top:8px}
+nav{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--bd);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+nav .in{display:flex;width:100%;max-width:520px}
+nav button{flex:1;background:none;border:0;color:var(--mut);padding:8px 2px 10px;font-size:.7rem;cursor:pointer;min-height:56px;font-family:inherit}
+nav button span{display:block;font-size:1.35rem}
+nav button.on{color:var(--ac2);font-weight:700}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+label{display:block;font-size:.85rem;color:var(--mut);margin:10px 0 4px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<nav><div class="in" id="nav"></div></nav>
+
+<script>
+/* ============================================================
+   EJERCICIO · Edu HQ  (v0.4: correcciones de técnica del curl + sesión Piernas suaves)
+   - Un solo archivo. Los datos se guardan en este navegador (localStorage).
+   - Respaldo manual: Ajustes > Exportar / Importar (sin la clave del hub).
+   - Hub: Ajustes > Ecosistema. Deja un resumen diario (ejercicio:dia) y tu peso (ejercicio:peso).
+     Contrato: ecosistema/CONTRATO-HUB.md
+   - Próximas versiones: leer lo que comes/juegas desde el hub, avisos con Google Calendar.
+   ============================================================ */
+
+/* ECO:BEGIN (cliente del hub; fuente única: ecosistema/eco-client.js) */
+/* ============================================================
+   ECO — cliente del Hub del ecosistema (JS puro, sin dependencias)
+   Se PEGA DENTRO de cada app (Diario, Cocina, Ejercicio, Bitácora), porque cada una es un archivo único.
+   Contrato de datos: ecosistema/CONTRATO-HUB.md   ·   Backend: ecosistema/hub-apps-script/Code.gs
+
+   Uso:
+     Eco.configurar({ url: 'https://script.google.com/macros/s/.../exec', key: 'LA_CLAVE', device: 'ejercicio-ab12' });
+     await Eco.ping();
+     await Eco.enviar([ Eco.registro('ejercicio', 'dia', '2026-11-23', { minimo: true }) ]);
+     const r = await Eco.traer(0, { apps: ['diario'], fromDate: '2026-11-16' });   // r.items, r.cursor
+   La CLAVE se guarda solo en el dispositivo (localStorage de la app); nunca en el código ni en respaldos.
+   ============================================================ */
+(function (root) {
+  const cfg = { url: '', key: '', device: '' };
+  const LOTE = 100;
+
+  function configurar(c) { Object.assign(cfg, c || {}); }
+  function listo() { return !!(cfg.url && cfg.key); }
+
+  function llamar(action, extra) {
+    if (!listo()) return Promise.reject(new Error('sin_configurar'));
+    const body = JSON.stringify(Object.assign({ action: action, key: cfg.key, device: cfg.device }, extra || {}));
+    // text/plain evita la petición previa (preflight) de CORS, que Apps Script no responde.
+    return fetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body })
+      .then(function (r) { if (!r.ok) throw new Error('http_' + r.status); return r.json(); })
+      .then(function (j) { if (!j || !j.ok) throw new Error((j && j.error) || 'error'); return j; });
+  }
+
+  /** Arma un registro. id por defecto: app:tipo:fecha. opc: { id, t, del }. */
+  function registro(app, tipo, fecha, datos, opc) {
+    opc = opc || {};
+    return {
+      id: opc.id || (app + ':' + tipo + ':' + fecha),
+      app: app, tipo: tipo, fecha: fecha,
+      datos: datos === undefined ? null : datos,
+      t: opc.t || Date.now(),
+      del: !!opc.del
+    };
+  }
+
+  function ping() { return llamar('ping'); }
+
+  /** Envía registros en lotes. Devuelve { items, rejected } con todo lo que respondió el hub. */
+  function enviar(items) {
+    const lotes = [];
+    for (let i = 0; i < items.length; i += LOTE) lotes.push(items.slice(i, i + LOTE));
+    const acum = { items: [], rejected: [] };
+    return lotes.reduce(function (p, lote) {
+      return p.then(function () {
+        return llamar('push', { items: lote }).then(function (r) {
+          acum.items = acum.items.concat(r.items || []);
+          acum.rejected = acum.rejected.concat(r.rejected || []);
+        });
+      });
+    }, Promise.resolve()).then(function () { return acum; });
+  }
+
+  /** Descarga todo lo nuevo desde "since" (cursor del servidor). filtros: { apps: [...], fromDate: 'AAAA-MM-DD' }. */
+  function traer(since, filtros) {
+    const acum = { items: [], cursor: since || 0 };
+    function paso(cursor) {
+      return llamar('pull', Object.assign({ since: cursor }, filtros || {})).then(function (r) {
+        acum.items = acum.items.concat(r.items || []);
+        acum.cursor = r.cursor;
+        return r.more ? paso(r.cursor) : acum;
+      });
+    }
+    return paso(since || 0);
+  }
+
+  /** Texto amable para mostrar en pantalla. */
+  function mensajeError(err) {
+    const m = String((err && err.message) || err || '');
+    if (m === 'clave') return 'La clave no coincide con la del hub.';
+    if (m === 'sin_configurar') return 'Falta la URL o la clave del hub (Ajustes > Ecosistema).';
+    if (/^http_/.test(m)) return 'El hub respondió con error (' + m.replace('http_', '') + '). Revisa la URL.';
+    if (/fetch|network|Load failed/i.test(m)) return 'Sin conexión o URL incorrecta. Se reintentará solo.';
+    return 'Error del hub: ' + m;
+  }
+
+  root.Eco = { configurar: configurar, listo: listo, registro: registro, ping: ping, enviar: enviar, traer: traer, mensajeError: mensajeError };
+})(typeof window !== 'undefined' ? window : globalThis);
+/* ECO:END */
+
+const KEY = 'ejercicioApp_v1';
+const IMG_BASE = 'https://raw.githubusercontent.com/yuhonas/free-exercise-db/main/exercises/';
+
+/* ---------- Ejercicios (biblioteca inicial) ---------- */
+const EJ = {
+  press: {
+    nombre: 'Press de banca con barra', fed: 'Barbell_Bench_Press_-_Medium_Grip',
+    musculos: 'Pecho · hombros · tríceps', impl: 'Barra + banca',
+    pasos: [
+      'Acuéstate con los ojos bajo la barra, pies firmes en el suelo, glúteos y hombros apoyados en la banca.',
+      'Junta los omóplatos hacia atrás y abajo, y mantén el pecho alto durante todo el ejercicio.',
+      'Agarra la barra un poco más ancho que los hombros, con las muñecas rectas, y llévala sobre el pecho con los brazos estirados.',
+      'Baja con control hasta rozar la parte media del pecho, sin rebotar. Los codos van algo cerrados, no abiertos del todo.',
+      'Empuja hacia arriba hasta estirar los brazos (sin bloquear los codos). Exhala al subir.'
+    ],
+    errores: ['Rebotar la barra en el pecho', 'Despegar los glúteos de la banca', 'Abrir los codos a 90°', 'Subir carga antes de dominar el movimiento'],
+    seg: 'Tu banca es antigua: antes de cada sesión revisa que no se mueva, que los tornillos estén firmes y que los soportes de la barra aguanten. Pon seguros (collarines) a los discos para que no se deslicen. Sin ayudante, mantén la carga liviana y no subas peso hasta dominar el movimiento. Si el hombro molesta, baja la carga.'
+  },
+  remo: {
+    nombre: 'Remo con barra', fed: 'Bent_Over_Barbell_Row',
+    musculos: 'Espalda · bíceps · hombros', impl: 'Barra',
+    pasos: [
+      'De pie, pies al ancho de caderas y rodillas levemente flexionadas, con la barra frente a ti.',
+      'Lleva la cadera hacia atrás e inclina el torso, con la espalda recta (no curva) y la mirada al suelo, un poco adelante.',
+      'Agarra la barra con las manos a un ancho similar al de los hombros y los brazos estirados.',
+      'Tira de la barra hacia la parte baja del abdomen, con los codos hacia atrás y pegados al cuerpo. Aprieta la espalda arriba.',
+      'Baja con control, manteniendo el torso quieto.'
+    ],
+    errores: ['Redondear la espalda', 'Impulsarse con el tronco', 'Usar más carga de la que controlas'],
+    seg: 'Si notas molestia en la espalda baja, para, reduce la inclinación o la carga.'
+  },
+  curl: {
+    nombre: 'Curl de bíceps con barra', fed: 'Barbell_Curl',
+    musculos: 'Bíceps · antebrazos', impl: 'Barra',
+    pasos: [
+      'De pie, pies al ancho de los hombros, con la barra agarrada con las palmas hacia arriba y los brazos estirados.',
+      'Pega los codos a los costados y sube la barra doblando solo los codos.',
+      'Aprieta el bíceps arriba y baja lento (unos 2-3 segundos).',
+      'Mantén el pecho alto y evita arquear la espalda.'
+    ],
+    errores: ['Balancear el cuerpo para subir', 'Llevar los codos hacia adelante', 'Dejar caer la barra de golpe', 'Subir la barra hasta la cara'],
+    tecnica: [
+      'Sube solo hasta la clavícula o el pecho; la barra no llega a la cara (si llega, los codos se fueron adelante y trabaja el hombro).',
+      'Codos pegados a las costillas durante toda la repetición.',
+      'Antes de cada repetición: hombros atrás y abajo, pecho alto. Abajo tienden a caerse hacia adelante.',
+      'Espalda alta y glúteos tocando la pared, sin empujarla. Si la barra solo sube con ayuda de la pared, el peso es demasiado.',
+      'Mira al frente (no hacia arriba) para no arquear la espalda. Agarre centrado, las dos manos parejas: la barra no debe inclinarse.',
+      'Para tomar la barra del suelo: rodillas dobladas, cadera atrás y espalda recta (o apóyala en la banca para no agacharte).'
+    ],
+    seg: 'Si la barra se siente pesada y empiezas a balancear, baja la carga.'
+  },
+  rdl: {
+    nombre: 'Peso muerto rumano', fed: 'Romanian_Deadlift',
+    musculos: 'Glúteos · parte trasera del muslo · espalda baja', impl: 'Barra',
+    pasos: [
+      'De pie, pies al ancho de caderas, barra en las manos (ancho de hombros), brazos estirados y rodillas apenas flexionadas.',
+      'Lleva la cadera hacia atrás, como si cerraras una puerta con el trasero, y baja la barra pegada a las piernas.',
+      'Mantén la espalda recta y los hombros atrás. Baja hasta sentir el estiramiento detrás del muslo (más o menos a un tercio de la tibia).',
+      'Sube empujando la cadera hacia adelante y apretando los glúteos.'
+    ],
+    errores: ['Redondear la espalda', 'Separar la barra del cuerpo', 'Doblar demasiado las rodillas (se vuelve sentadilla)', 'Bajar más de lo que tu movilidad permite'],
+    seg: 'Es un movimiento que exige control. Las primeras sesiones, solo con la barra y practicando la bisagra de cadera. Si molestan las rodillas o la espalda, reduce el recorrido o la carga. No bloquees rodillas ni codos al estirar.'
+  },
+  remoDb: {
+    nombre: 'Remo con mancuerna apoyado en la banca', fed: 'One-Arm_Dumbbell_Row', mancuerna: true,
+    musculos: 'Espalda · bíceps · hombros', impl: 'Mancuerna + banca',
+    pasos: [
+      'Apoya una rodilla y la mano del mismo lado sobre la banca, con la espalda recta y casi paralela al suelo. El otro pie firme en el suelo.',
+      'Toma la mancuerna con el brazo libre, estirado hacia el suelo, sin girar el tronco.',
+      'Tira de la mancuerna hacia la cadera, con el codo pasando cerca del cuerpo. Aprieta la espalda arriba.',
+      'Baja lento hasta estirar el brazo. Termina todas las repeticiones de un lado y cambia.'
+    ],
+    errores: ['Girar el tronco para subir', 'Redondear la espalda', 'Tirones con impulso'],
+    seg: 'Apoyar el cuerpo en la banca descarga la espalda baja: es más amable que el remo con barra. Antes de apoyarte, comprueba que la banca no se mueva. La carga la defines tú con la mancuerna que controles.'
+  },
+  plancha: {
+    nombre: 'Plancha en la colchoneta', fed: 'Plank', sinPeso: true,
+    musculos: 'Abdomen · core · hombros', impl: 'Colchoneta',
+    pasos: [
+      'Apoya antebrazos y puntas de los pies sobre la colchoneta, con los codos justo bajo los hombros.',
+      'Cuerpo en línea recta de cabeza a talones: glúteos apretados, abdomen firme, mirada al suelo.',
+      'Respira con calma y mantén el tiempo indicado (en "reps" anota los segundos).'
+    ],
+    errores: ['Hundir la cadera', 'Subir demasiado la cadera', 'Aguantar la respiración'],
+    seg: 'Si la espalda baja molesta, apoya las rodillas. Más corta y bien hecha vale más que larga y torcida.'
+  },
+  sentarse: {
+    nombre: 'Sentarse y pararse de la banca', fed: 'Bodyweight_Squat', sinPeso: true,
+    musculos: 'Muslos · glúteos · rodillas', impl: 'Banca plana',
+    pasos: [
+      'Pon la banca contra la pared para que no se mueva, y quédate de espaldas a ella, a un paso.',
+      'Pies al ancho de los hombros (ni pegados ni muy abiertos), con las puntas un poco hacia afuera. Marca la posición de los pies con cinta para que sea siempre la misma.',
+      'Lleva la cadera hacia atrás como si fueras a sentarte y baja despacio (3 segundos) hasta tocar la banca. No hace falta bajar más: este es tu rango por ahora.',
+      'Reparte el peso en el pie completo (talón, base del dedo gordo y del meñique). Las rodillas siguen la dirección de los pies, sin cerrarse.',
+      'Empuja el suelo con los pies y párate sin usar las manos si puedes. Si no, apóyalas en los muslos.'
+    ],
+    errores: ['Irse hacia un lado: carga más peso en una pierna', 'Dejarse caer sobre la banca', 'Rodillas que se cierran hacia adentro', 'Forzar un rango que duele'],
+    seg: 'Si te vas más hacia un lado, ve más lento y graba esta serie de frente: la asimetría se ve ahí. Dolor en la rodilla o la espalda: para. Si la diferencia entre lados persiste o hay dolor, vale la pena una evaluación con un kinesiólogo.'
+  },
+  puente: {
+    nombre: 'Puente de glúteos', fed: 'Butt_Lift_Bridge', sinPeso: true,
+    musculos: 'Glúteos · parte trasera del muslo', impl: 'Colchoneta',
+    pasos: [
+      'Acuéstate boca arriba en la colchoneta, rodillas dobladas y pies apoyados al ancho de las caderas.',
+      'Brazos a los lados. Aprieta los glúteos y sube la cadera hasta formar una línea del hombro a la rodilla.',
+      'Mantén 1-2 segundos arriba, sin arquear la espalda baja.',
+      'Baja despacio, vértebra por vértebra.'
+    ],
+    errores: ['Empujar con la espalda baja en vez de con los glúteos', 'Separar mucho las rodillas', 'Subir con impulso'],
+    seg: 'No exige doblar mucho las rodillas, así que es una buena puerta de entrada mientras ganas movilidad. Si sientes la espalda baja, sube menos y aprieta más los glúteos.'
+  },
+  ruedaAb: {
+    nombre: 'Rueda abdominal (versión corta)', fed: 'Ab_Roller', sinPeso: true,
+    musculos: 'Abdomen · core', impl: 'Rueda + colchoneta',
+    pasos: [
+      'De rodillas sobre la colchoneta, con las manos en los mangos y la rueda bajo los hombros.',
+      'Redondea apenas la espalda (cadera ligeramente metida) y aprieta el abdomen.',
+      'Rueda hacia adelante solo hasta donde mantengas la cadera firme; al inicio, un tramo corto (30-40 cm).',
+      'Vuelve tirando con el abdomen, no con los brazos.'
+    ],
+    errores: ['Dejar caer la cadera y arquear la espalda', 'Ir demasiado lejos al comienzo', 'Volver con impulso'],
+    seg: 'Es un ejercicio exigente para el abdomen. Parte con recorrido corto. Si la espalda baja se arquea o duele, acorta el recorrido o reemplázalo por plancha. Usa la colchoneta bajo las rodillas.'
+  }
+};
+
+/* ---------- Sesiones y rutina semanal (propuesta inicial, se ajusta contigo) ---------- */
+const SESIONES = {
+  descanso: { titulo: 'Descanso', icon: '😴', xp: 0, desc: 'Hoy toca recuperar. Si quieres moverte igual, el mínimo cuenta.' },
+  minimo:   { titulo: 'Mínimo del día', icon: '🌱', xp: 10, desc: '5 minutos de lo que prefieras: caminadora suave o estiramientos. Con esto el día ya cuenta.' },
+  fuerzaA:  { titulo: 'Fuerza A', icon: '🏋️', xp: 30, desc: 'Press de banca, remo con mancuerna, curl con barra y plancha. Unos 25-30 minutos.', ej: [['press', 3, '8-10'], ['remoDb', 3, '8-10'], ['curl', 2, '10-12'], ['plancha', 2, '20-30 s']] },
+  fuerzaB:  { titulo: 'Fuerza B', icon: '🏋️', xp: 30, desc: 'Peso muerto rumano, press de banca, curl y rueda abdominal corta. Unos 25-30 minutos.', ej: [['rdl', 3, '8-10'], ['press', 3, '8-10'], ['curl', 2, '10-12'], ['ruedaAb', 2, '5-8']] },
+  piernas:  { titulo: 'Piernas suaves', icon: '🦵', xp: 25, desc: 'Piernas sin peso y con recorrido corto: sentarse y pararse de la banca y puente de glúteos. Unos 15 minutos.', ej: [['sentarse', 3, '8-10'], ['puente', 3, '10-12']] },
+  cardio:   { titulo: 'Caminadora + movilidad', icon: '🚶', xp: 20, desc: '15 minutos de caminadora suave (con la tele conectada al teléfono) y 5 de estiramientos en la colchoneta. En el sauna solo cabe ejercicio sentado: respiración y movilidad de cuello y hombros.', ej: [] }
+};
+const RUTINA = { 0: 'descanso', 1: 'minimo', 2: 'fuerzaA', 3: 'cardio', 4: 'fuerzaB', 5: 'minimo', 6: 'cardio' };
+const DIAS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+const TITULOS = ['Aprendiz', 'Novato', 'Aventurero', 'Guerrero', 'Veterano', 'Campeón', 'Leyenda'];
+
+/* ---------- Estado ---------- */
+function fmt(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function parse(iso) { const p = iso.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+function hoy() { return fmt(new Date()); }
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+  });
+}
+function nuevoEstado() {
+  const h = hoy();
+  return { v: 1, inicio: h, tema: 'noche', log: {}, pesos: [],
+    perfil: { altura: null, edad: null, metaKg: null, barraKg: null, mancKg: null }, videos: {}, notas: {}, eco: ecoDefault() };
+}
+function cargar() {
+  try {
+    const s = JSON.parse(localStorage.getItem(KEY));
+    if (s && s.v === 1 && s.log) {
+      const st = Object.assign(nuevoEstado(), s);
+      st.eco = Object.assign(ecoDefault(), s.eco || {});
+      return st;
+    }
+  } catch (e) {}
+  return nuevoEstado();
+}
+let state = cargar();
+const ui = { tab: 'hoy', openEx: null, embed: {} };
+function guardar() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+/* ---------- Ecosistema (hub) ----------
+   Esta app deja en el hub un resumen de cada día (ejercicio:dia) y tu peso (ejercicio:peso).
+   Los cambios se marcan como "sucios" y se envían solos (con reintento si no hay internet). */
+const ecoGen = {};
+let ecoTimer = null, ecoBusy = false;
+function ecoDefault() {
+  return { url: '', key: '', device: 'ejercicio-' + Math.random().toString(36).slice(2, 6), sucias: [], sucP: [], ultimo: null, msg: '' };
+}
+function ecoConfig() { Eco.configurar({ url: state.eco.url, key: state.eco.key, device: state.eco.device }); }
+function ecoMarcarDia(f) { if (state.eco.sucias.indexOf(f) < 0) state.eco.sucias.push(f); ecoGen[f] = (ecoGen[f] || 0) + 1; }
+function ecoMarcarPeso(f) { if (state.eco.sucP.indexOf(f) < 0) state.eco.sucP.push(f); ecoGen['p:' + f] = (ecoGen['p:' + f] || 0) + 1; }
+function ecoProgramar() { clearTimeout(ecoTimer); ecoTimer = setTimeout(function () { ecoFlush(false); }, 1200); }
+function ecoResumenDia(f) {
+  const e = getE(f);
+  return { minimo: !!e.minimo, sesion: !!e.sesion, sesionTipo: tipoDe(f), series: setsHechos(e), xp: dayXP(f) };
+}
+async function ecoFlush(manual) {
+  const e = state.eco;
+  if (!Eco.listo()) { if (manual) e.msg = Eco.mensajeError(new Error('sin_configurar')); return; }
+  if (ecoBusy) return;
+  const dias = e.sucias.slice(), pesos = e.sucP.slice();
+  if (!dias.length && !pesos.length) { if (manual) e.msg = ''; return; }
+  ecoBusy = true;
+  const snap = {};
+  dias.forEach(function (f) { snap[f] = ecoGen[f] || 0; });
+  pesos.forEach(function (f) { snap['p:' + f] = ecoGen['p:' + f] || 0; });
+  try {
+    const items = dias.map(function (f) { return Eco.registro('ejercicio', 'dia', f, ecoResumenDia(f)); });
+    pesos.forEach(function (f) {
+      const p = state.pesos.filter(function (x) { return x.fecha === f; })[0];
+      items.push(Eco.registro('ejercicio', 'peso', f, p ? { kg: p.kg } : null, { del: !p }));
+    });
+    const r = await Eco.enviar(items);
+    if (r.rejected.length) throw new Error('rechazado: ' + r.rejected[0].motivo);
+    // solo se limpia lo que no cambió mientras se enviaba
+    e.sucias = e.sucias.filter(function (f) { return !(dias.indexOf(f) >= 0 && (ecoGen[f] || 0) === snap[f]); });
+    e.sucP = e.sucP.filter(function (f) { return !(pesos.indexOf(f) >= 0 && (ecoGen['p:' + f] || 0) === snap['p:' + f]); });
+    e.ultimo = Date.now(); e.msg = '';
+  } catch (err) { e.msg = Eco.mensajeError(err); }
+  ecoBusy = false; guardar();
+  if (!e.msg && (e.sucias.length || e.sucP.length)) ecoProgramar();
+}
+function ecoEstado() {
+  const e = state.eco;
+  if (!Eco.listo()) return 'Sin configurar: pega la URL y la clave del hub.';
+  const pend = e.sucias.length + e.sucP.length;
+  let s = e.ultimo ? 'Último envío: ' + new Date(e.ultimo).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '.' : 'Aún no se ha enviado nada.';
+  if (pend) s += ' Pendientes de enviar: ' + pend + '.';
+  if (e.msg) s += ' ⚠️ ' + e.msg;
+  return s;
+}
+function getE(iso) { return state.log[iso] || { minimo: false, sesion: false, tipo: null, sets: {} }; }
+function ens(iso) {
+  if (!state.log[iso]) state.log[iso] = { minimo: false, sesion: false, tipo: null, sets: {} };
+  if (!state.log[iso].sets) state.log[iso].sets = {};
+  return state.log[iso];
+}
+
+/* ---------- Cálculos ---------- */
+function tipoDe(iso) { const e = state.log[iso]; return (e && e.tipo) || RUTINA[parse(iso).getDay()]; }
+function setsHechos(e) {
+  let n = 0;
+  Object.keys(e.sets || {}).forEach(function (k) { (e.sets[k] || []).forEach(function (s) { if (s && s.done) n++; }); });
+  return n;
+}
+function hecho(e) { return !!(e && (e.minimo || e.sesion || setsHechos(e) > 0)); }
+function dayXP(iso) {
+  const e = state.log[iso]; if (!e) return 0;
+  let x = 0;
+  if (e.sesion) x += SESIONES[tipoDe(iso)].xp; else if (e.minimo) x += 10;
+  return x + setsHechos(e) * 2;
+}
+function totalXP() { return Object.keys(state.log).reduce(function (a, k) { return a + dayXP(k); }, 0); }
+function nivelInfo(xp) {
+  let l = 1; while (30 * (l + 1) * l <= xp) l++;
+  const base = 30 * l * (l - 1), next = 30 * (l + 1) * l;
+  return { l: l, base: base, next: next, pct: Math.round((xp - base) / (next - base) * 100) };
+}
+function racha() {
+  let n = 0; const d = new Date();
+  for (let i = 0; i < 400; i++) {
+    const iso = fmt(d);
+    if (hecho(state.log[iso])) n++;
+    else if (RUTINA[d.getDay()] === 'descanso') { /* el descanso no rompe la racha */ }
+    else if (i === 0) { /* hoy aún está pendiente */ }
+    else break;
+    d.setDate(d.getDate() - 1);
+  }
+  return n;
+}
+function semana() {
+  const diff = Math.round((parse(hoy()) - parse(state.inicio)) / 86400000);
+  return Math.max(1, Math.floor(diff / 7) + 1);
+}
+function ultimoKg(id) {
+  const ks = Object.keys(state.log).sort().reverse();
+  for (let j = 0; j < ks.length; j++) {
+    const a = (state.log[ks[j]].sets || {})[id];
+    if (a) for (let i = a.length - 1; i >= 0; i--) { if (a[i] && a[i].kg !== '' && a[i].kg != null) return a[i].kg; }
+  }
+  return '';
+}
+function ytId(u) {
+  if (!u) return null;
+  const m = u.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:.*&)?v=|embed\/|shorts\/))([A-Za-z0-9_-]{11})/);
+  return m ? m[1] : null;
+}
+function pesosOrdenados() { return state.pesos.slice().sort(function (a, b) { return a.fecha < b.fecha ? -1 : 1; }); }
+
+/* ---------- Vistas ---------- */
+function vHoy() {
+  const iso = hoy(), en = getE(iso), tipo = tipoDe(iso), S = SESIONES[tipo];
+  const xp = totalXP(), ni = nivelInfo(xp), r = racha(), sem = semana();
+  const fecha = new Date().toLocaleDateString('es-CL', { weekday: 'long', day: 'numeric', month: 'long' });
+  const titulo = TITULOS[Math.min(ni.l - 1, TITULOS.length - 1)];
+
+  // meta de peso
+  let meta = '';
+  const ps = pesosOrdenados(), ult = ps.length ? ps[ps.length - 1].kg : null, mk = state.perfil.metaKg;
+  if (mk && ult) {
+    const falta = ult - mk;
+    meta = falta > 0.05 ? '<div class="small">⚖️ Te faltan <b>' + falta.toFixed(1) + ' kg</b> para tu meta (' + mk + ' kg).</div>'
+                       : '<div class="small">⚖️ ¡Llegaste a tu meta de ' + mk + ' kg!</div>';
+  } else {
+    meta = '<div class="small mut">⚖️ Define tu meta de peso en Progreso para ver cuánto falta.</div>';
+  }
+
+  // últimos 7 días
+  let dots = '';
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const k = fmt(d), h = hecho(state.log[k]), rest = RUTINA[d.getDay()] === 'descanso';
+    dots += '<div class="' + (h ? 'ok ' : '') + (i === 0 ? 'today' : '') + '">' + DIAS[d.getDay()].slice(0, 3) +
+            '<b>' + (h ? '●' : (rest ? '–' : '○')) + '</b></div>';
+  }
+
+  // mensaje sin culpa
+  let msg = '';
+  const ay = new Date(); ay.setDate(ay.getDate() - 1);
+  if (!hecho(state.log[fmt(ay)]) && RUTINA[ay.getDay()] !== 'descanso' && !hecho(en) && Object.keys(state.log).length) {
+    msg = '<div class="note">Ayer no quedó registro y está bien. Hoy el mínimo de 5 minutos ya te devuelve al ritmo.</div>';
+  }
+
+  const opts = Object.keys(SESIONES).map(function (k) {
+    return '<option value="' + k + '"' + (k === tipo ? ' selected' : '') + '>' + SESIONES[k].icon + ' ' + SESIONES[k].titulo + '</option>';
+  }).join('');
+
+  let sets = '';
+  if (S.ej && S.ej.length) {
+    sets = S.ej.map(function (it) {
+      const id = it[0], ser = it[1], reps = it[2], e = EJ[id];
+      const n = sem === 1 ? Math.min(2, ser) : ser;
+      const last = e.sinPeso ? '' : (ultimoKg(id) || (e.mancuerna ? state.perfil.mancKg : state.perfil.barraKg) || '');
+      let rows = '';
+      for (let i = 0; i < n; i++) {
+        const s = (en.sets[id] || [])[i] || {};
+        const kg = (s.kg !== undefined && s.kg !== '' && s.kg !== null) ? s.kg : last;
+        rows += '<div class="set" data-ex="' + id + '" data-i="' + i + '"><span class="n">' + (i + 1) + '</span>' +
+          '<input type="number" inputmode="numeric" min="0" placeholder="' + (e.sinPeso && id === 'plancha' ? 'segundos' : 'reps') + '" value="' + esc(s.reps) + '" data-f="reps">' +
+          '<input type="number" inputmode="decimal" step="0.5" min="0" placeholder="' + (e.mancuerna ? 'kg mancuerna' : 'kg total') + '" value="' + esc(kg) + '" data-f="kg"' + (e.sinPeso ? ' style="visibility:hidden" tabindex="-1" aria-hidden="true"' : '') + '>' +
+          '<button class="chk' + (s.done ? ' on' : '') + '" data-act="toggleSet" aria-label="Serie ' + (i + 1) + ' hecha">' + (s.done ? '✓' : '') + '</button></div>';
+      }
+      return '<div class="ex"><div class="row"><b>' + e.nombre + '</b><button class="link" data-act="verEx" data-ex="' + id + '">ver cómo</button></div>' +
+             '<div class="mut small">' + n + ' series de ' + reps + (e.sinPeso ? ' · sin peso, controla la técnica' : ' · termina dejando ~2 repeticiones de sobra') + '</div>' + rows + '</div>';
+    }).join('');
+  }
+
+  const puedeTerminar = tipo !== 'descanso' && tipo !== 'minimo';
+  return '<div class="card hero"><div class="row"><div><div class="mut small">' + esc(fecha) + '</div><h1>Nivel ' + ni.l + ' · ' + titulo + '</h1></div>' +
+    '<div class="racha">🔥 ' + r + (r === 1 ? ' día' : ' días') + '</div></div>' +
+    '<div class="bar"><i style="width:' + ni.pct + '%"></i></div>' +
+    '<div class="mut small">' + (xp - ni.base) + ' / ' + (ni.next - ni.base) + ' XP para el nivel ' + (ni.l + 1) + ' · Semana ' + sem + '</div>' + meta + '</div>' +
+    '<div class="card"><div class="week">' + dots + '</div></div>' + msg +
+    '<div class="card"><div class="row"><h2>' + S.icon + ' ' + S.titulo + '</h2></div><p class="mut">' + S.desc + '</p>' +
+    (sem === 1 && S.ej && S.ej.length ? '<div class="note">Semana 1: 2 series por ejercicio y barra sola o carga muy liviana. La idea es aprender el movimiento.</div>' : '') +
+    '<label>Cambiar la sesión de hoy</label><select data-f="tipoHoy">' + opts + '</select>' +
+    '<button class="btn ' + (en.minimo ? 'on' : 'pri') + '" data-act="minimo">' + (en.minimo ? '✅ Mínimo hecho (5 min)' : '🌱 Hice mi mínimo (5 min)') + '</button>' +
+    sets +
+    (puedeTerminar ? '<button class="btn ' + (en.sesion ? 'on' : '') + '" data-act="terminar">' + (en.sesion ? '✅ Sesión completa (toca para deshacer)' : 'Marcar sesión completa') + '</button>' : '') +
+    '<p class="mut small">Hoy suma <b>' + dayXP(hoy()) + ' XP</b>. ' +
+    (puedeTerminar ? 'Cada serie marcada da 2 XP; el mínimo, 10; una sesión completa, ' + S.xp + '.' : 'El mínimo da 10 XP y mantiene tu racha.') + '</p></div>';
+}
+
+function vRutina() {
+  const hd = new Date().getDay();
+  const orden = [1, 2, 3, 4, 5, 6, 0];
+  const filas = orden.map(function (d) {
+    const S = SESIONES[RUTINA[d]];
+    return '<div class="dayrow' + (d === hd ? ' today' : '') + '"><span>' + DIAS[d] + '</span><span class="mut">' + S.icon + ' ' + S.titulo + '</span></div>';
+  }).join('');
+  const bloque = function (k) {
+    const S = SESIONES[k];
+    return '<h3>' + S.icon + ' ' + S.titulo + '</h3><ul>' + S.ej.map(function (it) {
+      return '<li>' + EJ[it[0]].nombre + ' · ' + it[1] + ' series de ' + it[2] + '</li>';
+    }).join('') + '</ul>';
+  };
+  return '<div class="card"><h2>Tu semana</h2><p class="mut small">Propuesta inicial, pensada para ti: lunes y viernes (los días más pesados) solo piden el mínimo. Se ajusta con el tiempo.</p>' + filas + '</div>' +
+    '<div class="card"><h2>Sesiones de fuerza</h2>' + bloque('fuerzaA') + bloque('fuerzaB') + bloque('piernas') +
+    '<h3>Cómo progresar</h3><p>Semana 1: 2 series con barra sola o carga liviana. Desde la semana 2: 3 series. Cuando completes todas las series con ~2 repeticiones de sobra, sube un poco la carga. Ojo: con 4 discos de 2,5 kg la barra llega solo a barra + 10 kg; cuando eso se quede corto, progresa con más repeticiones, pausas y tempo lento, o con mancuernas, no con los discos de arena.</p></div>' +
+    '<div class="card"><h2>Mi espacio</h2><ul class="small">' +
+    '<li><b>Banca Stingray Sports + barra:</b> antigua y con algo por reparar; úsala con revisión previa.</li>' +
+    '<li><b>Discos:</b> 4 de 2,5 kg (10 kg en total) + la barra. Los discos de arena no se usan: su peso ya es incierto.</li>' +
+    '<li><b>Mancuernas:</b> para remo y progresar donde la barra se quede corta. Falta medir su peso.</li>' +
+    '<li><b>Colchoneta, rueda abdominal y liga:</b> core y movilidad.</li>' +
+    '<li><b>Caminadora Maxkare + TV:</b> cardio suave los días de cardio.</li>' +
+    '<li><b>Sauna:</b> solo sentado (no se puede estirar); sirve para respiración y movilidad suave.</li>' +
+    '<li><b>Gancho del techo:</b> es de los de colgar bolsas. Solo para guardar las ligas; no cuelgues tu peso ni tires fuerte de él.</li>' +
+    '</ul></div>' +
+    '<div class="card"><h2>Reglas del juego</h2><ul>' +
+    '<li>Si el día se complica, el mínimo de 5 minutos cuenta.</li>' +
+    '<li>Sin saltos: se cuida el impacto en las rodillas y el piso.</li>' +
+    '<li>Con calor, ventilador y una hora más fresca.</li>' +
+    '<li>Si algo duele (no si cuesta), se para y se baja la carga.</li>' +
+    '<li>Fallar un día no pasa nada: se retoma sin culpa.</li></ul></div>';
+}
+
+function vEjercicios() {
+  const cards = Object.keys(EJ).map(function (id) {
+    const e = EJ[id], abierto = ui.openEx === id;
+    let det = '';
+    if (abierto) {
+      const url = state.videos[id] || '', yid = ytId(url);
+      det = '<div class="imgs"><img src="' + IMG_BASE + e.fed + '/0.jpg" alt="Posición inicial" onerror="this.style.display=\'none\'">' +
+            '<img src="' + IMG_BASE + e.fed + '/1.jpg" alt="Posición final" onerror="this.style.display=\'none\'"></div>' +
+            '<div class="mut small">Inicio y final del movimiento (Free Exercise DB, dominio público).</div>' +
+            '<h3>Paso a paso</h3><ol>' + e.pasos.map(function (p) { return '<li>' + p + '</li>'; }).join('') + '</ol>' +
+            '<h3>Errores comunes</h3><ul>' + e.errores.map(function (p) { return '<li>' + p + '</li>'; }).join('') + '</ul>' +
+            (e.tecnica ? '<h3>Mis correcciones</h3><ul>' + e.tecnica.map(function (p) { return '<li>' + p + '</li>'; }).join('') + '</ul>' : '') + '<div class="note warnbox">' + e.seg + '</div>' +
+            '<h3>Video</h3><input type="text" placeholder="Pega aquí un enlace de YouTube" value="' + esc(url) + '" data-f="video" data-ex="' + id + '">' +
+            (yid ? '<a class="link" target="_blank" rel="noopener" href="https://www.youtube.com/watch?v=' + yid + '">▶ Abrir en YouTube</a> ' +
+                   '<button class="link" data-act="embed" data-ex="' + id + '">' + (ui.embed[id] ? 'Ocultar aquí' : 'Ver aquí') + '</button>' : '') +
+            (yid && ui.embed[id] ? '<iframe src="https://www.youtube-nocookie.com/embed/' + yid + '" allowfullscreen loading="lazy"></iframe>' : '') +
+            '<h3>Mi nota</h3><textarea placeholder="Ej.: cómo me sentí, qué corregir…" data-f="nota" data-ex="' + id + '">' + esc(state.notas[id] || '') + '</textarea>';
+    }
+    return '<div class="card"><button class="exhead" data-act="abrirEx" data-ex="' + id + '"><div><b>' + e.nombre + '</b><div class="mut small">' + e.musculos + '</div></div><span>' + (abierto ? '▲' : '▼') + '</span></button>' +
+           '<div><span class="tag">' + e.impl + '</span></div>' + det + '</div>';
+  }).join('');
+  return '<div class="card"><h2>Biblioteca</h2><p class="mut small">Toca un ejercicio para ver las imágenes y el paso a paso. Para que revise tu técnica: grábate de frente y de lado, cuerpo completo, 6-8 repeticiones, con el celular a la altura de la cadera.</p></div>' + cards;
+}
+
+function grafico() {
+  const p = pesosOrdenados();
+  if (p.length < 2) return '<p class="mut small">Registra otro peso para ver tu línea de progreso.</p>';
+  const W = 320, H = 140, pd = 26, mk = state.perfil.metaKg;
+  const ks = p.map(function (x) { return x.kg; });
+  let mn = Math.min.apply(null, ks), mx = Math.max.apply(null, ks);
+  if (mk) { mn = Math.min(mn, mk); mx = Math.max(mx, mk); }
+  if (mx - mn < 1) { mx += 0.5; mn -= 0.5; }
+  const t0 = parse(p[0].fecha).getTime(), t1 = parse(p[p.length - 1].fecha).getTime(), dt = Math.max(1, t1 - t0);
+  const X = function (f) { return pd + (parse(f).getTime() - t0) / dt * (W - 2 * pd); };
+  const Y = function (k) { return H - pd - (k - mn) / (mx - mn) * (H - 2 * pd); };
+  const pts = p.map(function (x) { return X(x.fecha).toFixed(1) + ',' + Y(x.kg).toFixed(1); }).join(' ');
+  const dots = p.map(function (x) { return '<circle cx="' + X(x.fecha).toFixed(1) + '" cy="' + Y(x.kg).toFixed(1) + '" r="3.5" fill="var(--ac2)"/>'; }).join('');
+  const meta = mk ? '<line x1="' + pd + '" x2="' + (W - pd) + '" y1="' + Y(mk).toFixed(1) + '" y2="' + Y(mk).toFixed(1) + '" stroke="var(--warn)" stroke-dasharray="4 4"/>' +
+    '<text x="' + (W - pd) + '" y="' + (Y(mk) - 4).toFixed(1) + '" text-anchor="end" font-size="10" fill="var(--warn)">meta ' + mk + ' kg</text>' : '';
+  return '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" role="img" aria-label="Gráfico de peso">' +
+    '<text x="4" y="' + (pd + 3) + '" font-size="10" fill="var(--mut)">' + mx.toFixed(1) + '</text>' +
+    '<text x="4" y="' + (H - pd + 3) + '" font-size="10" fill="var(--mut)">' + mn.toFixed(1) + '</text>' +
+    meta + '<polyline points="' + pts + '" fill="none" stroke="var(--ac)" stroke-width="2.5" stroke-linejoin="round"/>' + dots + '</svg>';
+}
+
+function vProgreso() {
+  const ps = pesosOrdenados(), xp = totalXP();
+  const dias = Object.keys(state.log).filter(function (k) { return hecho(state.log[k]); }).length;
+  const ses = Object.keys(state.log).filter(function (k) { return state.log[k].sesion; }).length;
+  let resumen = '';
+  if (ps.length >= 2) {
+    const d = ps[ps.length - 1].kg - ps[0].kg;
+    resumen = '<p>Desde ' + ps[0].kg + ' kg hasta ' + ps[ps.length - 1].kg + ' kg: <b>' + (d > 0 ? '+' : '') + d.toFixed(1) + ' kg</b>.</p>';
+  }
+  const hist = ps.slice().reverse().slice(0, 10).map(function (x) {
+    const i = state.pesos.indexOf(x);
+    return '<div class="hist"><span>' + esc(x.fecha) + ' · <b>' + x.kg + ' kg</b></span><button class="link" data-act="delPeso" data-i="' + i + '">borrar</button></div>';
+  }).join('');
+  return '<div class="card"><h2>Peso</h2>' + resumen + grafico() +
+    '<div class="two"><div><label>Fecha</label><input type="date" id="pesoFecha" value="' + hoy() + '"></div>' +
+    '<div><label>Peso (kg)</label><input type="number" inputmode="decimal" step="0.1" id="pesoKg" placeholder="ej. 98.5"></div></div>' +
+    '<button class="btn pri" data-act="addPeso">Guardar peso</button>' +
+    '<p class="mut small">Con pesarte una vez por semana alcanza: el peso sube y baja de un día a otro y puede desanimar.</p>' + hist + '</div>' +
+    '<div class="card"><h2>Meta de peso</h2><label>Mi meta (kg)</label><input type="number" inputmode="decimal" step="0.5" data-f="perfil" data-k="metaKg" value="' + esc(state.perfil.metaKg) + '" placeholder="Aún sin definir">' +
+    '<p class="mut small">La pantalla de Hoy te mostrará cuánto falta. Puedes elegir una meta intermedia más cercana, que motiva más.</p></div>' +
+    '<div class="card"><h2>Tu aventura</h2><div class="two"><div><div class="mut small">XP total</div><b>' + xp + '</b></div><div><div class="mut small">Nivel</div><b>' + nivelInfo(xp).l + '</b></div>' +
+    '<div><div class="mut small">Días con actividad</div><b>' + dias + '</b></div><div><div class="mut small">Sesiones completas</div><b>' + ses + '</b></div></div></div>';
+}
+
+function vAjustes() {
+  return '<div class="card"><h2>Apariencia</h2><button class="btn" data-act="tema">' + (state.tema === 'noche' ? '☀️ Cambiar a modo día' : '🌙 Cambiar a modo noche') + '</button></div>' +
+    '<div class="card"><h2>Mis datos</h2><div class="two"><div><label>Altura (cm)</label><input type="number" inputmode="numeric" data-f="perfil" data-k="altura" value="' + esc(state.perfil.altura) + '"></div>' +
+    '<div><label>Edad</label><input type="number" inputmode="numeric" data-f="perfil" data-k="edad" value="' + esc(state.perfil.edad) + '"></div></div>' +
+    '<label>Peso de la barra sola (kg)</label><input type="number" inputmode="decimal" step="0.5" data-f="perfil" data-k="barraKg" value="' + esc(state.perfil.barraKg) + '" placeholder="Sin medir aún">' +
+    '<p class="mut small">Para medirla: pésate solo, luego pésate sujetando la barra, y resta. Después, en cada serie anota el peso total (barra + discos).</p>' +
+    '<label>Peso de tu mancuerna de remo (kg, una)</label><input type="number" inputmode="decimal" step="0.5" data-f="perfil" data-k="mancKg" value="' + esc(state.perfil.mancKg) + '" placeholder="Sin medir aún">' +
+    '<p class="mut small">Pésala en una pesa de baño (o pésate con y sin ella). Con eso la app te sugiere el peso en el remo.</p></div>' +
+    '<div class="card"><h2>Ecosistema</h2><p class="mut small">Conecta esta app con tu hub para que el Diario y las demás apps vean tu ejercicio y tu peso. Pega la URL y la clave que te dio el script del hub.</p>' +
+    '<label>URL del hub</label><input type="text" data-f="eco" data-k="url" value="' + esc(state.eco.url) + '" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">' +
+    '<label>Clave</label><input type="password" data-f="eco" data-k="key" value="' + esc(state.eco.key) + '" autocomplete="off">' +
+    '<button class="btn" data-act="ecoPing">Probar conexión</button>' +
+    '<button class="btn" data-act="ecoSync">Enviar todo ahora</button>' +
+    '<p class="small">' + esc(ui.ecoMsg || '') + '</p>' +
+    '<p class="mut small">' + esc(ecoEstado()) + '</p>' +
+    '<p class="mut small">La clave se guarda solo en este dispositivo y no va en los respaldos.</p></div>' +
+    '<div class="card"><h2>Respaldo</h2><p class="mut small">Tus datos viven en este navegador. Exporta un respaldo de vez en cuando, o para pasarlos a otro dispositivo.</p>' +
+    '<button class="btn" data-act="exportar">⬇️ Exportar respaldo</button>' +
+    '<label>Importar respaldo (.json)</label><input type="file" accept="application/json,.json" id="imp">' +
+    '<button class="btn danger" data-act="reset">Borrar todos los datos</button></div>' +
+    '<div class="card"><h2>Próximamente</h2><ul class="mut small"><li>Leer del hub lo que comes y juegas, para ajustar la dieta y la carga</li><li>Misión «ejercicio» dentro del Diario</li><li>Avisos con Google Calendar</li><li>Rutinas y ajustes asistidos por IA</li></ul></div>';
+}
+
+const TABS = [['hoy', '🏠', 'Hoy', vHoy], ['rutina', '🗓', 'Rutina', vRutina], ['ejercicios', '📖', 'Ejercicios', vEjercicios], ['progreso', '📈', 'Progreso', vProgreso], ['ajustes', '⚙️', 'Ajustes', vAjustes]];
+
+function render() {
+  document.documentElement.dataset.theme = state.tema;
+  const t = TABS.filter(function (x) { return x[0] === ui.tab; })[0] || TABS[0];
+  document.getElementById('app').innerHTML = t[3]();
+  document.getElementById('nav').innerHTML = TABS.map(function (x) {
+    return '<button class="' + (x[0] === ui.tab ? 'on' : '') + '" data-act="tab" data-tab="' + x[0] + '"><span>' + x[1] + '</span>' + x[2] + '</button>';
+  }).join('');
+}
+
+/* ---------- Eventos ---------- */
+document.addEventListener('click', function (e) {
+  const t = e.target.closest('[data-act]'); if (!t) return;
+  const a = t.dataset.act;
+  if (a === 'tab') { ui.tab = t.dataset.tab; render(); window.scrollTo(0, 0); return; }
+  if (a === 'minimo') { const en = ens(hoy()); en.minimo = !en.minimo; ecoMarcarDia(hoy()); guardar(); render(); ecoProgramar(); return; }
+  if (a === 'terminar') { const en = ens(hoy()); en.sesion = !en.sesion; ecoMarcarDia(hoy()); guardar(); render(); ecoProgramar(); return; }
+  if (a === 'toggleSet') {
+    const row = t.closest('.set'), ex = row.dataset.ex, i = +row.dataset.i, en = ens(hoy());
+    en.sets[ex] = en.sets[ex] || [];
+    const cur = en.sets[ex][i] || {};
+    en.sets[ex][i] = { reps: row.querySelector('[data-f=reps]').value, kg: row.querySelector('[data-f=kg]').value, done: !cur.done };
+    ecoMarcarDia(hoy()); guardar(); render(); ecoProgramar(); return;
+  }
+  if (a === 'verEx') { ui.tab = 'ejercicios'; ui.openEx = t.dataset.ex; render(); window.scrollTo(0, 0); return; }
+  if (a === 'abrirEx') { ui.openEx = ui.openEx === t.dataset.ex ? null : t.dataset.ex; render(); return; }
+  if (a === 'embed') { ui.embed[t.dataset.ex] = !ui.embed[t.dataset.ex]; render(); return; }
+  if (a === 'addPeso') {
+    const kg = parseFloat(document.getElementById('pesoKg').value), f = document.getElementById('pesoFecha').value || hoy();
+    if (!(kg >= 30 && kg <= 300)) { alert('Escribe un peso entre 30 y 300 kg.'); return; }
+    state.pesos = state.pesos.filter(function (p) { return p.fecha !== f; });
+    state.pesos.push({ fecha: f, kg: Math.round(kg * 10) / 10 });
+    ecoMarcarPeso(f); guardar(); render(); ecoProgramar(); return;
+  }
+  if (a === 'delPeso') {
+    const p = state.pesos[+t.dataset.i];
+    state.pesos.splice(+t.dataset.i, 1);
+    if (p) ecoMarcarPeso(p.fecha);
+    guardar(); render(); ecoProgramar(); return;
+  }
+  if (a === 'tema') { state.tema = state.tema === 'noche' ? 'dia' : 'noche'; guardar(); render(); return; }
+  if (a === 'ecoPing') {
+    ui.ecoMsg = 'Probando…'; render();
+    Eco.ping().then(function (r) { ui.ecoMsg = '✅ Conectado al hub (' + r.registros + ' registros guardados).'; })
+      .catch(function (err) { ui.ecoMsg = '⚠️ ' + Eco.mensajeError(err); })
+      .then(function () { if (ui.tab === 'ajustes') render(); });
+    return;
+  }
+  if (a === 'ecoSync') {
+    Object.keys(state.log).forEach(ecoMarcarDia);
+    state.pesos.forEach(function (p) { ecoMarcarPeso(p.fecha); });
+    guardar(); ui.ecoMsg = 'Enviando…'; render();
+    ecoFlush(true).then(function () { ui.ecoMsg = state.eco.msg ? '' : '✅ Todo enviado.'; if (ui.tab === 'ajustes') render(); });
+    return;
+  }
+  if (a === 'exportar') {
+    const copia = JSON.parse(JSON.stringify(state));
+    copia.eco = Object.assign({}, copia.eco, { key: '' });          // la clave del hub NUNCA va en un respaldo
+    const blob = new Blob([JSON.stringify(copia, null, 2)], { type: 'application/json' });
+    const l = document.createElement('a');
+    l.href = URL.createObjectURL(blob); l.download = 'ejercicio-respaldo-' + hoy() + '.json';
+    document.body.appendChild(l); l.click(); l.remove(); return;
+  }
+  if (a === 'reset') {
+    if (confirm('¿Borrar todos los datos de esta app? No se puede deshacer.')) {
+      const eco = state.eco;                                         // se conserva la conexión con el hub
+      state = nuevoEstado(); state.eco = Object.assign(ecoDefault(), { url: eco.url, key: eco.key, device: eco.device });
+      guardar(); render();
+    }
+    return;
+  }
+});
+
+document.addEventListener('change', function (e) {
+  const t = e.target;
+  if (t.id === 'imp') {
+    const f = t.files && t.files[0]; if (!f) return;
+    const rd = new FileReader();
+    rd.onload = function () {
+      try {
+        const s = JSON.parse(rd.result);
+        if (!s || s.v !== 1 || !s.log) throw new Error('formato');
+        const eco = state.eco;                                       // el respaldo no trae la clave: se conserva la actual
+        state = Object.assign(nuevoEstado(), s); state.eco = eco;
+        Object.keys(state.log).forEach(ecoMarcarDia); state.pesos.forEach(function (p) { ecoMarcarPeso(p.fecha); });
+        guardar(); render(); ecoProgramar(); alert('Respaldo importado.');
+      } catch (err) { alert('Ese archivo no parece un respaldo de esta app.'); }
+    };
+    rd.readAsText(f); return;
+  }
+  const f = t.dataset && t.dataset.f; if (!f) return;
+  if (f === 'tipoHoy') {
+    const en = ens(hoy()); const d = RUTINA[new Date().getDay()];
+    en.tipo = t.value === d ? null : t.value; en.sesion = false; ecoMarcarDia(hoy()); guardar(); render(); ecoProgramar(); return;
+  }
+  if (f === 'eco') {
+    state.eco[t.dataset.k] = t.value.trim(); ecoConfig(); guardar(); ui.ecoMsg = ''; render();
+    if (Eco.listo()) ecoProgramar();
+    return;
+  }
+  if (f === 'reps' || f === 'kg') {
+    const row = t.closest('.set'); if (!row) return;
+    const ex = row.dataset.ex, i = +row.dataset.i, en = ens(hoy());
+    en.sets[ex] = en.sets[ex] || [];
+    const cur = en.sets[ex][i] || { reps: '', kg: '', done: false };
+    cur[f] = t.value; en.sets[ex][i] = cur; guardar(); return;
+  }
+  if (f === 'perfil') {
+    const v = t.value === '' ? null : parseFloat(t.value);
+    state.perfil[t.dataset.k] = (v === null || isNaN(v)) ? null : v; guardar(); render(); return;
+  }
+  if (f === 'video') { state.videos[t.dataset.ex] = t.value.trim(); guardar(); render(); return; }
+  if (f === 'nota') { state.notas[t.dataset.ex] = t.value; guardar(); return; }
+});
+
+ecoConfig();
+window.addEventListener('online', ecoProgramar);
+render();
+if (Eco.listo() && (state.eco.sucias.length || state.eco.sucP.length)) ecoProgramar();   // reenvía lo que quedó pendiente
+</script>
+</body>
+</html>

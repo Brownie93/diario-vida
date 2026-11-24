@@ -298,6 +298,19 @@ textarea.en-text{width:100%;min-height:170px;resize:vertical;background:var(--pa
 .only-wide{display:none}
 @media (min-width:900px){.only-wide{display:inline}}
 
+/* ── comidas y misiones del ecosistema ── */
+.meals{margin-top:1rem;background:var(--panel2);border:1px solid var(--border);border-radius:14px;padding:.8rem 1rem}
+.meals-h{display:flex;justify-content:space-between;align-items:baseline;gap:.5rem;margin-bottom:.5rem;flex-wrap:wrap}
+.meal{display:flex;align-items:center;gap:.6rem;padding:.35rem 0;border-bottom:1px solid var(--border)}
+.meal b{font-family:var(--ff-mono);font-size:.82rem;color:var(--accent2);flex:none}
+.meal span{flex:1;min-width:0;word-break:break-word;font-size:.92rem}
+.meal-del{width:34px;height:34px;font-size:.85rem}
+.meal-add{display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap}
+.meal-add input[type=time]{width:auto;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:.35rem .5rem;min-height:42px}
+.meal-add input[type=text]{flex:1 1 180px;width:auto;background:var(--panel)}
+.quest.auto{cursor:default}
+.quest.auto .qt small{color:var(--dim)}
+
 </style>
 </head>
 <body>
@@ -361,6 +374,15 @@ textarea.en-text{width:100%;min-height:170px;resize:vertical;background:var(--pa
                 <span class="pt">Pastilla de este día<small id="pillSub">Pendiente</small></span>
                 <span class="pc">✓</span>
               </button>
+              <div class="meals" id="meals">
+                <div class="meals-h"><b>🍽️ Comidas del día</b><span class="muted sm" id="mealsSub"></span></div>
+                <div id="mealsList"></div>
+                <form class="meal-add" id="mealForm" autocomplete="off">
+                  <input type="time" id="mealTime" aria-label="Hora de la comida">
+                  <input type="text" id="mealText" maxlength="200" placeholder="Ej.: pollo con arroz y ensalada" aria-label="Qué comiste">
+                  <button class="btn" type="submit">Añadir</button>
+                </form>
+              </div>
               <div class="actions">
                 <button class="btn primary" id="saveBtn">Guardar y sincronizar</button>
                 <span class="muted sm only-wide">Ctrl+S guardar · Alt+←/→ cambiar de día</span>
@@ -433,6 +455,23 @@ textarea.en-text{width:100%;min-height:170px;resize:vertical;background:var(--pa
             <div class="muted sm" id="cfgSyncInfo" style="margin-top:.7rem"></div>
           </div>
 
+          <div class="card span2">
+            <h2>Ecosistema (Hub)</h2>
+            <details>
+              <summary>¿Para qué sirve?</summary>
+              <ol>
+                <li>El hub es un buzón común: Ejercicio, Cocina y Bitácora dejan ahí «hoy hice esto» y el Diario completa misiones solo.</li>
+                <li>El Diario deja ahí un resumen del día (pastilla, ánimo, comidas). <b>Nunca el texto de tus entradas ni tus fotos.</b></li>
+                <li>La URL y la clave son las del proyecto «Hub Ecosistema» de Apps Script. <b>No son las de la sincronización del Diario.</b></li>
+              </ol>
+            </details>
+            <div class="row col"><div class="lbl">URL del hub</div><input type="url" id="cfgHubUrl" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off" spellcheck="false"></div>
+            <div class="row col"><div class="lbl">Clave del hub</div>
+              <div style="display:flex;gap:.5rem"><input type="password" id="cfgHubKey" autocomplete="off" spellcheck="false" placeholder="La que mostró setup() del hub"><button class="btn" id="cfgHubShow" type="button">Ver</button></div></div>
+            <div class="actions"><button class="btn" id="cfgHubTest" type="button">Probar conexión</button><button class="btn primary" id="cfgHubSync" type="button">Sincronizar con el hub</button><button class="btn sm" id="cfgHubAll" type="button">Reenviar últimos 60 días</button></div>
+            <div class="muted sm" id="cfgHubInfo" style="margin-top:.7rem"></div>
+          </div>
+
           <div class="card wide">
             <h2>Datos y respaldo</h2>
             <div class="row"><div><div class="lbl">Espacio en este dispositivo</div><div class="desc" id="cfgStorage">—</div></div><button class="btn sm" id="cfgPersist">Proteger de borrado</button></div>
@@ -455,6 +494,91 @@ textarea.en-text{width:100%;min-height:170px;resize:vertical;background:var(--pa
 <script>
 (() => {
 'use strict';
+
+/* ECO:BEGIN — cliente del hub (se rellena con ecosistema/tools/inyectar_eco.py) */
+/* ============================================================
+   ECO — cliente del Hub del ecosistema (JS puro, sin dependencias)
+   Se PEGA DENTRO de cada app (Diario, Cocina, Ejercicio, Bitácora), porque cada una es un archivo único.
+   Contrato de datos: ecosistema/CONTRATO-HUB.md   ·   Backend: ecosistema/hub-apps-script/Code.gs
+
+   Uso:
+     Eco.configurar({ url: 'https://script.google.com/macros/s/.../exec', key: 'LA_CLAVE', device: 'ejercicio-ab12' });
+     await Eco.ping();
+     await Eco.enviar([ Eco.registro('ejercicio', 'dia', '2026-11-23', { minimo: true }) ]);
+     const r = await Eco.traer(0, { apps: ['diario'], fromDate: '2026-11-16' });   // r.items, r.cursor
+   La CLAVE se guarda solo en el dispositivo (localStorage de la app); nunca en el código ni en respaldos.
+   ============================================================ */
+(function (root) {
+  const cfg = { url: '', key: '', device: '' };
+  const LOTE = 100;
+
+  function configurar(c) { Object.assign(cfg, c || {}); }
+  function listo() { return !!(cfg.url && cfg.key); }
+
+  function llamar(action, extra) {
+    if (!listo()) return Promise.reject(new Error('sin_configurar'));
+    const body = JSON.stringify(Object.assign({ action: action, key: cfg.key, device: cfg.device }, extra || {}));
+    // text/plain evita la petición previa (preflight) de CORS, que Apps Script no responde.
+    return fetch(cfg.url, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body })
+      .then(function (r) { if (!r.ok) throw new Error('http_' + r.status); return r.json(); })
+      .then(function (j) { if (!j || !j.ok) throw new Error((j && j.error) || 'error'); return j; });
+  }
+
+  /** Arma un registro. id por defecto: app:tipo:fecha. opc: { id, t, del }. */
+  function registro(app, tipo, fecha, datos, opc) {
+    opc = opc || {};
+    return {
+      id: opc.id || (app + ':' + tipo + ':' + fecha),
+      app: app, tipo: tipo, fecha: fecha,
+      datos: datos === undefined ? null : datos,
+      t: opc.t || Date.now(),
+      del: !!opc.del
+    };
+  }
+
+  function ping() { return llamar('ping'); }
+
+  /** Envía registros en lotes. Devuelve { items, rejected } con todo lo que respondió el hub. */
+  function enviar(items) {
+    const lotes = [];
+    for (let i = 0; i < items.length; i += LOTE) lotes.push(items.slice(i, i + LOTE));
+    const acum = { items: [], rejected: [] };
+    return lotes.reduce(function (p, lote) {
+      return p.then(function () {
+        return llamar('push', { items: lote }).then(function (r) {
+          acum.items = acum.items.concat(r.items || []);
+          acum.rejected = acum.rejected.concat(r.rejected || []);
+        });
+      });
+    }, Promise.resolve()).then(function () { return acum; });
+  }
+
+  /** Descarga todo lo nuevo desde "since" (cursor del servidor). filtros: { apps: [...], fromDate: 'AAAA-MM-DD' }. */
+  function traer(since, filtros) {
+    const acum = { items: [], cursor: since || 0 };
+    function paso(cursor) {
+      return llamar('pull', Object.assign({ since: cursor }, filtros || {})).then(function (r) {
+        acum.items = acum.items.concat(r.items || []);
+        acum.cursor = r.cursor;
+        return r.more ? paso(r.cursor) : acum;
+      });
+    }
+    return paso(since || 0);
+  }
+
+  /** Texto amable para mostrar en pantalla. */
+  function mensajeError(err) {
+    const m = String((err && err.message) || err || '');
+    if (m === 'clave') return 'La clave no coincide con la del hub.';
+    if (m === 'sin_configurar') return 'Falta la URL o la clave del hub (Ajustes > Ecosistema).';
+    if (/^http_/.test(m)) return 'El hub respondió con error (' + m.replace('http_', '') + '). Revisa la URL.';
+    if (/fetch|network|Load failed/i.test(m)) return 'Sin conexión o URL incorrecta. Se reintentará solo.';
+    return 'Error del hub: ' + m;
+  }
+
+  root.Eco = { configurar: configurar, listo: listo, registro: registro, ping: ping, enviar: enviar, traer: traer, mensajeError: mensajeError };
+})(typeof window !== 'undefined' ? window : globalThis);
+/* ECO:END */
 
 /* ═══════════════ utilidades ═══════════════ */
 const $ = (s, r = document) => r.querySelector(s);
@@ -530,7 +654,7 @@ function dbDel(s, k) {
 }
 
 /* ═══════════════ estado ═══════════════ */
-const DEF_CFG = { mode: 'auto', accent: 'dorado', fontScale: 1, name: 'Edu', remOn: true, remHour: 21, apiUrl: '', apiKey: '', autoSync: true, device: '' };
+const DEF_CFG = { mode: 'auto', accent: 'dorado', fontScale: 1, name: 'Edu', remOn: true, remHour: 21, apiUrl: '', apiKey: '', autoSync: true, device: '', hubUrl: '', hubKey: '' };
 const S = {
   entries: new Map(),   // id → entrada (incluye borradas = tombstones)
   days: new Map(),      // fecha → { date, pill, tPill, dirty, rev, baseT }
@@ -540,7 +664,8 @@ const S = {
   calY: 0, calM: 0,
   stats: null,
   hist: { q: '', filter: 'all', mode: 'list', limit: 30 },
-  syncing: false, syncAgain: false, syncTimer: null, warnedRejected: false
+  syncing: false, syncAgain: false, syncTimer: null, warnedRejected: false,
+  hub: { cursor: 0, lastOk: 0, sucias: new Set(), mark: {}, dias: {}, comidas: {}, bonus: {}, msg: '', busy: false, again: false, timer: null }
 };
 { const d = new Date(); S.calY = d.getFullYear(); S.calM = d.getMonth(); }
 
@@ -640,7 +765,7 @@ function computeStats(entries, days, today) {
   const pills = [...days.values()].filter(d => d.pill).map(d => d.date).sort();
   const written = [...new Set(list.filter(isWritten).map(e => e.date))].sort();
   const wSet = new Set(written), pSet = new Set(pills);
-  let xp = 5 * pills.length, totalWords = 0, mediaCount = 0;
+  let xp = 5 * pills.length + hubBonusTotal(), totalWords = 0, mediaCount = 0;   // hubBonusTotal: misiones automáticas del ecosistema (0 si no hay hub)
   for (const e of list) {
     if (hasText(e)) { const w = words(e.text); totalWords += w; xp += 10 + Math.min(10, Math.floor(w / 20)); }
     const mc = liveMedia(e).length; mediaCount += mc; if (mc) xp += 5;
@@ -697,14 +822,14 @@ async function commit(e, quiet = false) {
   S.entries.set(e.id, e);
   try { await dbPut('entries', e.id, e); } catch (err) { onStorageError(err); throw err; }
   refreshDerived();
-  if (!quiet) scheduleSync();
+  if (!quiet) { scheduleSync(); hubMarcar(e.date); }
 }
 async function commitDay(d, quiet = false) {
   d.dirty = true; d.rev = (d.rev || 0) + 1;
   S.days.set(d.date, d);
   try { await dbPut('days', d.date, d); } catch (err) { onStorageError(err); throw err; }
   refreshDerived();
-  if (!quiet) scheduleSync();
+  if (!quiet) { scheduleSync(); hubMarcar(d.date); }
 }
 const getE = id => S.entries.get(id);
 /** Crea una entrada vacía en `date` (solo se guarda/sincroniza cuando tenga contenido). */
@@ -722,6 +847,7 @@ async function setWhen(id, date, hhmm) {
   const e = getE(id); if (!e || e.del) return;
   const at = atFrom(date, hhmm);
   if (e.date === date && e.at === at) return;
+  if (e.date !== date) hubMarcar(e.date);   // el día de origen también cambia
   e.date = date; e.at = at; e.tAt = stamp(e.tAt); await commit(e);
 }
 async function setPill(date, v) { const d = getDay(date); if (d.pill === v && S.days.has(date)) return; d.pill = v; d.tPill = stamp(d.tPill); await commitDay(d); }
@@ -729,7 +855,7 @@ async function deleteEntry(id) {
   const e = getE(id); if (!e || e.del) return;
   const sinServidor = !e.baseT && !e.media.some(m => m.remoteId);
   for (const m of e.media) await dbDel('blobs', m.id).catch(() => {});
-  if (sinServidor && !e.dirty) { S.entries.delete(id); await dbDel('entries', id).catch(() => {}); refreshDerived(); return; }
+  if (sinServidor && !e.dirty) { S.entries.delete(id); await dbDel('entries', id).catch(() => {}); refreshDerived(); hubMarcar(e.date); return; }
   e.del = true; e.tDel = stamp(e.tDel);
   await commit(e);
 }
@@ -1136,6 +1262,217 @@ async function importFile(file) {
   return { nE, nM, missing };
 }
 
+/* ═══════════════ ecosistema (hub) ═══════════════
+ * El Diario deja en el hub un RESUMEN de cada día (pastilla, entradas, ánimo, comidas; nunca el texto del diario)
+ * y lee lo que reportan Ejercicio, Cocina y Bitácora para completar misiones solas.
+ * Contrato: ecosistema/CONTRATO-HUB.md. Todo es opcional: sin URL/clave del hub, el Diario funciona igual que antes.
+ * Datos locales (IndexedDB, meta 'hub'): cursor, lastOk, sucias[], dias{fecha:{ejercicio,cocina,bitacora}}, comidas{fecha:[…]}, bonus{fecha:xp}.
+ */
+const HUB_FUENTES = ['ejercicio', 'cocina', 'bitacora'];
+const hubOn = () => !!(S.cfg.hubUrl && S.cfg.hubKey);
+const hubDia = (f, app) => ((S.hub.dias[f] || {})[app]) || null;
+const comidasDia = f => (S.hub.comidas[f] || []).filter(c => !c.del).sort((a, b) => (a.hora < b.hora ? -1 : a.hora > b.hora ? 1 : a.t - b.t));
+
+/** Misiones que se completan solas con lo que reportan las otras apps (más «anotar comidas», que se hace en el Diario). */
+function misionesHub(f) {
+  const ej = hubDia(f, 'ejercicio'), co = hubDia(f, 'cocina'), bi = hubDia(f, 'bitacora');
+  const nCo = co && Array.isArray(co.cocinadas) ? co.cocinadas.length : 0;
+  const minB = bi ? Number(bi.minutos) || 0 : 0;
+  return [
+    { id: 'comida', i: '🍽️', t: 'Anotar lo que comiste', x: 3, local: true, done: comidasDia(f).length > 0,
+      s: comidasDia(f).length ? `${comidasDia(f).length} ${plural(comidasDia(f).length, 'comida anotada', 'comidas anotadas')}` : 'Toca para anotar tus comidas' },
+    { id: 'ejercicio', i: '🏋️', t: 'Mover el cuerpo', x: 10, done: !!(ej && (ej.minimo || ej.sesion)),
+      s: ej && ej.sesion ? `Sesión completa${ej.series ? ' · ' + ej.series + ' series' : ''}` : ej && ej.minimo ? 'Mínimo del día hecho' : 'Lo marca la app de Ejercicio' },
+    { id: 'cocina', i: '🍳', t: 'Cocinar algo', x: 5, done: nCo > 0,
+      s: nCo ? co.cocinadas.map(c => c && c.nombre).filter(Boolean).slice(0, 3).join(', ') || 'Cocinaste hoy' : 'Lo marca el Asistente de Cocina' },
+    { id: 'juego', i: '🎮', t: 'Un rato de juego', x: 3, done: minB > 0,
+      s: minB > 0 ? `${minB} min${Array.isArray(bi.juegos) && bi.juegos.length ? ' · ' + bi.juegos.slice(0, 2).join(', ') : ''}` : 'Lo marca la Bitácora' }
+  ];
+}
+const hubBonusDia = f => misionesHub(f).reduce((n, m) => n + (m.done ? m.x : 0), 0);
+function hubRecalcBonus(f) { const v = hubBonusDia(f); if (v) S.hub.bonus[f] = v; else delete S.hub.bonus[f]; }
+const hubBonusTotal = () => Object.values(S.hub.bonus).reduce((a, b) => a + b, 0);
+
+/* ── guardado local ── */
+function hubPoda() {
+  const limDias = addDays(S.today, -45), limCom = addDays(S.today, -120);
+  for (const f of Object.keys(S.hub.dias)) if (f < limDias) delete S.hub.dias[f];
+  for (const f of Object.keys(S.hub.comidas)) {
+    if (f < limCom) { delete S.hub.comidas[f]; continue; }
+    S.hub.comidas[f] = S.hub.comidas[f].filter(c => !(c.del && !c.dirty && c.t < Date.now() - 30 * 864e5));
+    if (!S.hub.comidas[f].length) delete S.hub.comidas[f];
+  }
+}
+function saveHub() {
+  hubPoda();
+  const h = S.hub;
+  return dbPut('meta', 'hub', { cursor: h.cursor, lastOk: h.lastOk, sucias: [...h.sucias], dias: h.dias, comidas: h.comidas, bonus: h.bonus }).catch(onStorageError);
+}
+function hubCfg() { Eco.configurar({ url: S.cfg.hubUrl, key: S.cfg.hubKey, device: 'diario-' + String(S.cfg.device || '').slice(0, 10) }); }
+
+/* ── marcar cambios y programar envío ── */
+function hubMarcar(date) {
+  if (!date) return;
+  S.hub.sucias.add(date);
+  S.hub.mark[date] = (S.hub.mark[date] || 0) + 1;
+  saveHub();
+  hubProgramar();
+}
+function hubProgramar(delay = 2500) {
+  if (!hubOn()) return;
+  clearTimeout(S.hub.timer);
+  S.hub.timer = setTimeout(() => hubSync(), delay);
+}
+const hubPendientes = () => S.hub.sucias.size + Object.values(S.hub.comidas).reduce((n, l) => n + l.filter(c => c.dirty).length, 0);
+
+/** Reenvía los últimos 60 días con datos (primera conexión, cambio de hub o botón manual). */
+function hubMarcarTodo() {
+  const desde = addDays(S.today, -60);
+  for (const e of S.entries.values()) if (!e.del && e.date >= desde && (isWritten(e) || e.mood)) S.hub.sucias.add(e.date);
+  for (const d of S.days.values()) if (d.pill && d.date >= desde) S.hub.sucias.add(d.date);
+  for (const [f, l] of Object.entries(S.hub.comidas)) if (f >= desde) { S.hub.sucias.add(f); l.forEach(c => { c.dirty = true; }); }
+  S.hub.sucias.forEach(f => { S.hub.mark[f] = (S.hub.mark[f] || 0) + 1; });
+  return saveHub();
+}
+
+function hubResumenDia(f) {
+  const es = dayEntries(f), wr = es.filter(isWritten), ms = es.map(e => e.mood).filter(Boolean);
+  return {
+    pastilla: !!getDay(f).pill,
+    escribio: wr.some(hasText),
+    entradas: wr.length,
+    fotos: wr.reduce((n, e) => n + liveMedia(e).length, 0),
+    animo: ms.length ? Math.round(ms.reduce((a, b) => a + b, 0) / ms.length * 10) / 10 : 0,
+    comidas: comidasDia(f).length
+  };
+}
+
+/* ── sincronización con el hub ── */
+async function hubPush() {
+  const marks = { ...S.hub.mark }, fechas = [...S.hub.sucias], items = [], com = [];
+  for (const f of fechas) items.push(Eco.registro('diario', 'dia', f, hubResumenDia(f)));
+  for (const [f, l] of Object.entries(S.hub.comidas)) for (const c of l) if (c.dirty) {
+    items.push(Eco.registro('diario', 'comida', f, c.del ? null : { hora: c.hora, texto: c.texto }, { id: `diario:comida:${f}:${c.id}`, t: c.t, del: !!c.del }));
+    com.push({ c, t: c.t });
+  }
+  if (!items.length) return;
+  const r = await Eco.enviar(items);
+  for (const f of fechas) if (S.hub.mark[f] === marks[f]) { S.hub.sucias.delete(f); delete S.hub.mark[f]; }
+  for (const x of com) if (x.c.t === x.t) x.c.dirty = false;
+  if (r.rejected && r.rejected.length) S.hub.msg = `El hub rechazó ${r.rejected.length} ${plural(r.rejected.length, 'registro', 'registros')} (${r.rejected[0].motivo}).`;
+}
+
+function hubAplicar(it) {
+  const f = it.fecha;
+  if (it.app === 'diario') {
+    if (it.tipo !== 'comida') return false;
+    const cid = String(it.id).split(':').slice(3).join(':');
+    if (!cid) return false;
+    const l = S.hub.comidas[f] || (S.hub.comidas[f] = []), cur = l.find(c => c.id === cid);
+    if (cur && cur.t >= it.t) return false;                    // lo local es igual o más nuevo
+    const d = it.datos || {}, nuevo = { id: cid, hora: /^\d\d:\d\d$/.test(d.hora || '') ? d.hora : '12:00', texto: String(d.texto || '').slice(0, 200), t: it.t, del: !!it.del, dirty: false };
+    if (cur) Object.assign(cur, nuevo); else l.push(nuevo);
+    hubRecalcBonus(f);
+    return true;
+  }
+  if (it.tipo === 'dia' && HUB_FUENTES.includes(it.app)) {
+    const m = S.hub.dias[f] || (S.hub.dias[f] = {});
+    m[it.app] = it.del ? null : (it.datos || null);
+    hubRecalcBonus(f);
+    return true;
+  }
+  return false;
+}
+async function hubPull() {
+  const r = await Eco.traer(S.hub.cursor, { apps: ['diario', ...HUB_FUENTES], fromDate: addDays(S.today, -30) });
+  let cambio = false;
+  for (const it of r.items) if (hubAplicar(it)) cambio = true;
+  S.hub.cursor = Math.max(S.hub.cursor, r.cursor || 0);
+  return cambio;
+}
+
+async function hubSync(manual = false) {
+  if (!hubOn()) { if (manual) toast('Primero pega la URL y la clave del hub en Ajustes.'); return false; }
+  if (S.hub.busy) { S.hub.again = true; return false; }
+  if (navigator.onLine === false) { S.hub.msg = 'Sin conexión. Se reintentará solo.'; renderHubInfo(); return false; }
+  S.hub.busy = true; hubCfg();
+  let ok = false, cambio = false;
+  try {
+    S.hub.msg = '';
+    await hubPush();
+    cambio = await hubPull();
+    S.hub.lastOk = Date.now(); ok = true;
+    await saveHub();
+  } catch (err) {
+    S.hub.msg = Eco.mensajeError(err);
+    if (manual) toast('Hub: ' + S.hub.msg);
+  } finally {
+    S.hub.busy = false;
+    if (S.hub.again) { S.hub.again = false; hubProgramar(600); }
+  }
+  if (cambio) { refreshDerived(); if (S.view === 'diario') renderMeals(); }
+  renderHubInfo();
+  return ok;
+}
+
+/* ── comidas (se anotan en el Diario; Cocina las lee desde el hub) ── */
+async function addComida(f, hora, texto) {
+  texto = String(texto || '').trim().slice(0, 200);
+  if (!texto) return false;
+  const c = { id: 'c' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), hora: /^\d\d:\d\d$/.test(hora || '') ? hora : '12:00', texto, t: stamp(0), del: false, dirty: true };
+  (S.hub.comidas[f] || (S.hub.comidas[f] = [])).push(c);
+  hubRecalcBonus(f);
+  refreshDerived(); renderMeals(); hubMarcar(f);
+  return true;
+}
+function delComida(f, id) {
+  const c = (S.hub.comidas[f] || []).find(x => x.id === id);
+  if (!c || c.del) return;
+  c.del = true; c.dirty = true; c.t = stamp(c.t);
+  hubRecalcBonus(f);
+  refreshDerived(); renderMeals(); hubMarcar(f);
+}
+const nowHHMM = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()); };
+function renderMeals() {
+  const box = $('#mealsList'); if (!box) return;
+  const list = comidasDia(S.sel);
+  box.textContent = '';
+  for (const c of list) {
+    const row = document.createElement('div'); row.className = 'meal'; row.dataset.id = c.id;
+    const t = document.createElement('b'); t.textContent = c.hora;
+    const x = document.createElement('span'); x.textContent = c.texto;
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'ib meal-del'; b.textContent = '✕'; b.setAttribute('aria-label', 'Quitar esta comida'); b.title = 'Quitar';
+    row.append(t, x, b); box.append(row);
+  }
+  $('#mealsSub').textContent = list.length ? `${list.length} ${plural(list.length, 'comida', 'comidas')}` : (hubOn() ? 'Se comparte con Cocina' : 'Solo en este dispositivo hasta conectar el hub');
+}
+function resetMealForm() { const t = $('#mealTime'); if (t) t.value = S.sel === S.today ? nowHHMM() : '12:00'; }
+
+/* ── Ajustes ── */
+function renderHubInfo() {
+  const el = $('#cfgHubInfo'); if (!el) return;
+  const n = hubPendientes(), lines = [];
+  if (!hubOn()) lines.push('Sin conectar: el Diario funciona solo, pero no recibe misiones de las otras apps.');
+  else {
+    lines.push(S.hub.lastOk ? 'Última conexión: ' + new Date(S.hub.lastOk).toLocaleString('es-CL') : 'Configurado. Aún no se ha conectado.');
+    lines.push(`${n} ${plural(n, 'cambio pendiente', 'cambios pendientes')} de enviar al hub`);
+    const hoy = S.today, est = [['Ejercicio', 'ejercicio'], ['Cocina', 'cocina'], ['Bitácora', 'bitacora']].map(([nm, k]) => `${nm} ${hubDia(hoy, k) ? '✓' : '—'}`).join(' · ');
+    lines.push('Hoy el hub informa: ' + est);
+  }
+  if (S.hub.msg) lines.push('⚠ ' + S.hub.msg);
+  el.innerHTML = lines.map(esc).join('<br>');
+}
+async function persistHub() {
+  const url = $('#cfgHubUrl').value.trim(), key = $('#cfgHubKey').value.trim();
+  const cambio = url !== S.cfg.hubUrl;
+  S.cfg.hubUrl = url; S.cfg.hubKey = key;
+  await saveCfg();
+  if (cambio) { S.hub.cursor = 0; S.hub.lastOk = 0; }
+  if (hubOn()) { hubCfg(); if (cambio || !S.hub.lastOk) await hubMarcarTodo(); hubProgramar(500); }
+  if (url && !/\/exec$/.test(url)) toast('La URL debería terminar en /exec');
+  renderHubInfo();
+}
+
 /* ═══════════════ interfaz: base ═══════════════ */
 const keyFromNum = n => { const d = new Date(n * 864e5); return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`; };
 const plural = (n, s, p) => n === 1 ? s : p;
@@ -1210,7 +1547,11 @@ function renderYo() {
     { a: 'write', i: '✍️', t: 'Escribir la entrada de hoy', s: e.text ? '¡Hecho!' : 'Cuenta cómo va tu día', x: 10, d: e.text > 0 },
     { a: 'photo', i: '📷', t: 'Guardar un recuerdo', s: e.media ? '¡Hecho!' : 'Una foto o video (opcional)', x: 5, d: e.media > 0 }
   ];
-  $('#yoQuests').innerHTML = quests.map(q => `<button class="quest${q.d ? ' done' : ''}" data-a="${q.a}"><span class="qi">${q.i}</span><span class="qt"><b>${q.t}</b><small>${q.s}</small></span><span class="qx">+${q.x} XP</span><span class="qc">✓</span></button>`).join('');
+  const hm = misionesHub(S.today).filter(m => m.local || hubOn());
+  $('#yoQuests').innerHTML = quests.map(q => `<button class="quest${q.d ? ' done' : ''}" data-a="${q.a}"><span class="qi">${q.i}</span><span class="qt"><b>${q.t}</b><small>${q.s}</small></span><span class="qx">+${q.x} XP</span><span class="qc">✓</span></button>`).join('') +
+    hm.map(m => m.local
+      ? `<button class="quest${m.done ? ' done' : ''}" data-a="meal"><span class="qi">${m.i}</span><span class="qt"><b>${esc(m.t)}</b><small>${esc(m.s)}</small></span><span class="qx">+${m.x} XP</span><span class="qc">✓</span></button>`
+      : `<div class="quest auto${m.done ? ' done' : ''}" data-m="${m.id}"><span class="qi">${m.i}</span><span class="qt"><b>${esc(m.t)}</b><small>${esc(m.s)}</small></span><span class="qx">+${m.x} XP</span><span class="qc">✓</span></div>`).join('');
 
   let wk = '';
   for (let i = 6; i >= 0; i--) {
@@ -1389,7 +1730,7 @@ function renderDay(focusId) {
     renderGalleryEl($('.en-gallery', c), e);
     setOpen(c, S.open.has(e.id) || !isWritten(e) || list.length === 1, false);
   }
-  renderCalendar(); renderEditorMeta();
+  renderCalendar(); renderEditorMeta(); renderMeals(); resetMealForm();
   if (focusId) { const c = cardOf(focusId); if (c) { c.scrollIntoView({ block: 'center', behavior: 'smooth' }); $('.en-text', c).focus(); } }
 }
 function loadDay(date, focusId) {
@@ -1549,7 +1890,8 @@ function renderConfig() {
   const nb = $('#cfgNotif');
   if (!('Notification' in window)) { nb.hidden = true; }
   else { nb.textContent = Notification.permission === 'granted' ? 'Activadas ✓' : Notification.permission === 'denied' ? 'Bloqueadas' : 'Activar'; nb.disabled = Notification.permission !== 'default'; }
-  renderSyncInfo(); renderStorage();
+  $('#cfgHubUrl').value = c.hubUrl || ''; $('#cfgHubKey').value = c.hubKey || '';
+  renderSyncInfo(); renderHubInfo(); renderStorage();
 }
 
 /* ═══════════════ visor (lightbox) ═══════════════ */
@@ -1655,9 +1997,10 @@ function bind() {
   $('#syncChip').addEventListener('click', () => { if (configured()) syncNow(true); else goView('config'); });
 
   $('#yoQuests').addEventListener('click', ev => {
-    const q = ev.target.closest('.quest'); if (!q) return;
+    const q = ev.target.closest('.quest'); if (!q || q.classList.contains('auto')) return;   // las misiones automáticas las marcan las otras apps
     const a = q.dataset.a;
     if (a === 'pill') setPill(S.today, !getDay(S.today).pill);
+    else if (a === 'meal') { selectDay(S.today); goView('diario'); const t = $('#mealText'); if (t) t.focus(); }
     else {
       selectDay(S.today); goView('diario');
       const cards = $$('#entries .entry'), last = cards[cards.length - 1];
@@ -1793,6 +2136,27 @@ function bind() {
     catch (err) { toast('No se pudo importar: ' + err.message); }
   });
 
+  /* comidas */
+  $('#mealForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const t = $('#mealText');
+    if (await addComida(S.sel, $('#mealTime').value, t.value)) { t.value = ''; resetMealForm(); t.focus(); }
+  });
+  $('#mealsList').addEventListener('click', ev => { const b = ev.target.closest('.meal-del'); if (b) delComida(S.sel, b.closest('.meal').dataset.id); });
+
+  /* hub */
+  $('#cfgHubUrl').addEventListener('change', persistHub);
+  $('#cfgHubKey').addEventListener('change', persistHub);
+  $('#cfgHubShow').addEventListener('click', () => { const i = $('#cfgHubKey'), show = i.type === 'password'; i.type = show ? 'text' : 'password'; $('#cfgHubShow').textContent = show ? 'Ocultar' : 'Ver'; });
+  $('#cfgHubTest').addEventListener('click', async () => {
+    await persistHub();
+    if (!hubOn()) { toast('Pega la URL y la clave del hub.'); return; }
+    try { hubCfg(); const j = await Eco.ping(); toast(`✓ Conectado al hub · ${j.registros} ${plural(j.registros, 'registro', 'registros')}`); }
+    catch (err) { toast('✗ ' + Eco.mensajeError(err)); }
+  });
+  $('#cfgHubSync').addEventListener('click', async () => { await persistHub(); hubSync(true).then(ok => { if (ok) toast('Hub al día ✓'); }); });
+  $('#cfgHubAll').addEventListener('click', async () => { await persistHub(); await hubMarcarTodo(); hubSync(true).then(ok => { if (ok) toast('Últimos 60 días enviados ✓'); }); });
+
   /* visor */
   $('#lbClose').addEventListener('click', () => closeLightbox());
   $('#lbStage').addEventListener('click', ev => { if (ev.target.id === 'lbStage') closeLightbox(); });
@@ -1817,9 +2181,9 @@ function bind() {
     if ((ev.ctrlKey || ev.metaKey) && ev.key.toLowerCase() === 's') { ev.preventDefault(); if (S.view === 'diario') $('#saveBtn').click(); else syncNow(true); return; }
     if (ev.altKey && S.view === 'diario' && (ev.key === 'ArrowLeft' || ev.key === 'ArrowRight')) { ev.preventDefault(); selectDay(addDays(S.sel, ev.key === 'ArrowLeft' ? -1 : 1)); }
   });
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveDraft.flush(); else { tick(); scheduleSync(300); } });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') saveDraft.flush(); else { tick(); scheduleSync(300); hubProgramar(500); } });
   window.addEventListener('pagehide', () => saveDraft.flush());
-  window.addEventListener('online', () => scheduleSync(500));
+  window.addEventListener('online', () => { scheduleSync(500); hubProgramar(500); });
   window.addEventListener('offline', () => { if (configured()) setSync('offline'); });
   if (mq && mq.addEventListener) mq.addEventListener('change', () => { if (S.cfg.mode === 'auto') applyTheme(); });
   document.addEventListener('pointerdown', () => { try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {} }, { once: true });
@@ -1848,6 +2212,7 @@ function tick() {
   }
   renderBanner(); maybeNotify();
   if (document.visibilityState === 'visible' && configured() && S.cfg.autoSync && !S.syncing && Date.now() - S.sync.lastOk > 180000) syncNow();
+  if (document.visibilityState === 'visible' && hubOn() && !S.hub.busy && Date.now() - S.hub.lastOk > 180000) hubSync();
 }
 
 /* ═══════════════ migración desde la versión anterior ═══════════════ */
@@ -1902,6 +2267,9 @@ async function init() {
   await saveCfg();
   const sy = await dbGet('meta', 'sync');
   if (sy) { S.sync.cursor = sy.cursor || 0; S.sync.lastOk = sy.lastOk || 0; }
+  const hb = await dbGet('meta', 'hub');
+  if (hb) Object.assign(S.hub, { cursor: hb.cursor || 0, lastOk: hb.lastOk || 0, sucias: new Set(hb.sucias || []), dias: hb.dias || {}, comidas: hb.comidas || {}, bonus: hb.bonus || {} });
+  if (hubOn()) hubCfg();
   await migrateV1();
   if (await migrateV2()) { S.sync.cursor = 0; await saveSyncMeta(); }   // el servidor nuevo usa otro formato: se vuelve a sincronizar todo
   for (const [id, e] of await dbAllKV('entries')) if (e && e.v === 3) S.entries.set(id, e);
@@ -1913,8 +2281,9 @@ async function init() {
   goView((location.hash || '').slice(1));
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(() => {});
   if (configured()) setTimeout(() => syncNow(), 700);
+  if (hubOn()) setTimeout(() => hubSync(), 1200);
   setInterval(tick, 30000);
-  window.__dv = { S, syncNow, goView, selectDay, exportAll, importFile, getBlob, pendingCount, newEntry, setText, setMood, setWhen, setPill, deleteEntry, addFiles, removeMedia, ensureBlob, dayEntries, getDay, refreshDerived };   // para depurar en la consola
+  window.__dv = { S, syncNow, goView, selectDay, exportAll, importFile, getBlob, pendingCount, newEntry, setText, setMood, setWhen, setPill, deleteEntry, addFiles, removeMedia, ensureBlob, dayEntries, getDay, refreshDerived, hubSync, hubMarcarTodo, addComida, delComida, comidasDia, misionesHub };   // para depurar en la consola
 }
 init().catch(err => {
   console.error(err);
