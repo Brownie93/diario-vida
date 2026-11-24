@@ -72,7 +72,7 @@ label{display:block;font-size:.85rem;color:var(--mut);margin:10px 0 4px}
 
 <script>
 /* ============================================================
-   EJERCICIO · Edu HQ  (v0.4: correcciones de técnica del curl + sesión Piernas suaves)
+   EJERCICIO · Edu HQ  (v0.5: sincroniza en los dos sentidos con el hub)
    - Un solo archivo. Los datos se guardan en este navegador (localStorage).
    - Respaldo manual: Ajustes > Exportar / Importar (sin la clave del hub).
    - Hub: Ajustes > Ecosistema. Deja un resumen diario (ejercicio:dia) y tu peso (ejercicio:peso).
@@ -340,47 +340,129 @@ function guardar() { try { localStorage.setItem(KEY, JSON.stringify(state)); } c
 const ecoGen = {};
 let ecoTimer = null, ecoBusy = false;
 function ecoDefault() {
-  return { url: '', key: '', device: 'ejercicio-' + Math.random().toString(36).slice(2, 6), sucias: [], sucP: [], ultimo: null, msg: '' };
+  return { url: '', key: '', device: 'ejercicio-' + Math.random().toString(36).slice(2, 6), sucias: [], sucP: [], sucPerfil: false, t: {}, cursor: 0, ultimo: null, lectura: null, msg: '' };
 }
 function ecoConfig() { Eco.configurar({ url: state.eco.url, key: state.eco.key, device: state.eco.device }); }
-function ecoMarcarDia(f) { if (state.eco.sucias.indexOf(f) < 0) state.eco.sucias.push(f); ecoGen[f] = (ecoGen[f] || 0) + 1; }
-function ecoMarcarPeso(f) { if (state.eco.sucP.indexOf(f) < 0) state.eco.sucP.push(f); ecoGen['p:' + f] = (ecoGen['p:' + f] || 0) + 1; }
+function ecoMarcarDia(f) { if (state.eco.sucias.indexOf(f) < 0) state.eco.sucias.push(f); ecoGen[f] = (ecoGen[f] || 0) + 1; state.eco.t['d:' + f] = Date.now(); }
+function ecoMarcarPeso(f) { if (state.eco.sucP.indexOf(f) < 0) state.eco.sucP.push(f); ecoGen['p:' + f] = (ecoGen['p:' + f] || 0) + 1; state.eco.t['p:' + f] = Date.now(); }
+function ecoMarcarPerfil() { state.eco.sucPerfil = true; ecoGen.perfil = (ecoGen.perfil || 0) + 1; state.eco.t.perfil = Date.now(); }
 function ecoProgramar() { clearTimeout(ecoTimer); ecoTimer = setTimeout(function () { ecoFlush(false); }, 1200); }
 function ecoResumenDia(f) {
   const e = getE(f);
-  return { minimo: !!e.minimo, sesion: !!e.sesion, sesionTipo: tipoDe(f), series: setsHechos(e), xp: dayXP(f) };
+  return { minimo: !!e.minimo, sesion: !!e.sesion, sesionTipo: tipoDe(f), series: setsHechos(e), xp: dayXP(f), log: JSON.parse(JSON.stringify(e)) };
 }
 async function ecoFlush(manual) {
   const e = state.eco;
   if (!Eco.listo()) { if (manual) e.msg = Eco.mensajeError(new Error('sin_configurar')); return; }
   if (ecoBusy) return;
-  const dias = e.sucias.slice(), pesos = e.sucP.slice();
-  if (!dias.length && !pesos.length) { if (manual) e.msg = ''; return; }
+  const dias = e.sucias.slice(), pesos = e.sucP.slice(), perfil = e.sucPerfil;
+  if (!dias.length && !pesos.length && !perfil) { if (manual) e.msg = ''; return; }
   ecoBusy = true;
   const snap = {};
   dias.forEach(function (f) { snap[f] = ecoGen[f] || 0; });
   pesos.forEach(function (f) { snap['p:' + f] = ecoGen['p:' + f] || 0; });
+  snap.perfil = ecoGen.perfil || 0;
   try {
-    const items = dias.map(function (f) { return Eco.registro('ejercicio', 'dia', f, ecoResumenDia(f)); });
+    const items = dias.map(function (f) { return Eco.registro('ejercicio', 'dia', f, ecoResumenDia(f), { t: e.t['d:' + f] || Date.now() }); });
     pesos.forEach(function (f) {
       const p = state.pesos.filter(function (x) { return x.fecha === f; })[0];
-      items.push(Eco.registro('ejercicio', 'peso', f, p ? { kg: p.kg } : null, { del: !p }));
+      items.push(Eco.registro('ejercicio', 'peso', f, p ? { kg: p.kg } : null, { del: !p, t: e.t['p:' + f] || Date.now() }));
     });
+    if (perfil) items.push(Eco.registro('ejercicio', 'perfil', PERFIL_FECHA, ecoDatosPerfil(), { t: e.t.perfil || Date.now() }));
     const r = await Eco.enviar(items);
     if (r.rejected.length) throw new Error('rechazado: ' + r.rejected[0].motivo);
     // solo se limpia lo que no cambió mientras se enviaba
     e.sucias = e.sucias.filter(function (f) { return !(dias.indexOf(f) >= 0 && (ecoGen[f] || 0) === snap[f]); });
     e.sucP = e.sucP.filter(function (f) { return !(pesos.indexOf(f) >= 0 && (ecoGen['p:' + f] || 0) === snap['p:' + f]); });
+    if (perfil && (ecoGen.perfil || 0) === snap.perfil) e.sucPerfil = false;
     e.ultimo = Date.now(); e.msg = '';
   } catch (err) { e.msg = Eco.mensajeError(err); }
   ecoBusy = false; guardar();
-  if (!e.msg && (e.sucias.length || e.sucP.length)) ecoProgramar();
+  if (!e.msg && (e.sucias.length || e.sucP.length || e.sucPerfil)) ecoProgramar();
+}
+
+/* ---------- Leer del hub (para que el teléfono y el computador queden iguales) ----------
+   Gana el cambio más nuevo de cada día / peso. Un día que este dispositivo nunca había enviado se combina
+   con el del hub (no se pierde nada) y se vuelve a enviar ya unido. */
+const PERFIL_FECHA = '2000-01-01';
+let ecoPulling = false;
+function ecoDatosPerfil() {
+  const p = state.perfil;
+  return { altura: p.altura, edad: p.edad, metaKg: p.metaKg, barraKg: p.barraKg, mancKg: p.mancKg };
+}
+function ecoFusion(a, b) {
+  const o = { minimo: !!(a.minimo || b.minimo), sesion: !!(a.sesion || b.sesion), tipo: a.tipo || b.tipo || null, sets: {} };
+  Object.keys(Object.assign({}, a.sets || {}, b.sets || {})).forEach(function (id) {
+    const x = (a.sets || {})[id] || [], y = (b.sets || {})[id] || [];
+    const hx = x.filter(function (q) { return q && q.done; }).length, hy = y.filter(function (q) { return q && q.done; }).length;
+    o.sets[id] = hy > hx ? y : x;
+  });
+  return o;
+}
+function ecoAplicar(it) {
+  const e = state.eco;
+  if (!it || it.app !== 'ejercicio') return false;
+  if (it.tipo === 'dia') {
+    const k = 'd:' + it.fecha, tl = e.t[k], d = it.datos || {}, loc = state.log[it.fecha];
+    if (tl !== undefined && tl >= it.t) return false;                      // lo de aquí es igual o más nuevo
+    if (!d.log) {                                                          // registro antiguo, solo resumen
+      if (loc) return false;
+      state.log[it.fecha] = { minimo: !!d.minimo, sesion: !!d.sesion, tipo: null, sets: {} }; e.t[k] = it.t; return true;
+    }
+    if (tl === undefined && loc && hecho(loc)) {                           // nunca enviado desde aquí: se combinan
+      state.log[it.fecha] = ecoFusion(loc, d.log); ecoMarcarDia(it.fecha); return true;
+    }
+    state.log[it.fecha] = d.log; e.t[k] = it.t; return true;
+  }
+  if (it.tipo === 'peso') {
+    const k = 'p:' + it.fecha, tl = e.t[k];
+    if (tl !== undefined && tl >= it.t) return false;
+    const i = state.pesos.findIndex(function (p) { return p.fecha === it.fecha; });
+    if (it.del || !it.datos || typeof it.datos.kg !== 'number') { if (i >= 0) state.pesos.splice(i, 1); }
+    else if (i >= 0) state.pesos[i].kg = it.datos.kg; else state.pesos.push({ fecha: it.fecha, kg: it.datos.kg });
+    e.t[k] = it.t; return true;
+  }
+  if (it.tipo === 'perfil') {
+    const tl = e.t.perfil;
+    if (tl !== undefined && tl >= it.t) return false;
+    const d = it.datos || {};
+    ['altura', 'edad', 'metaKg', 'barraKg', 'mancKg'].forEach(function (c) { if (typeof d[c] === 'number') state.perfil[c] = d[c]; });
+    e.t.perfil = it.t; return true;
+  }
+  return false;
+}
+async function ecoPull() {
+  const e = state.eco;
+  if (!Eco.listo() || ecoPulling) return false;
+  ecoPulling = true; let cambio = false;
+  try {
+    const r = await Eco.traer(e.cursor || 0, { apps: ['ejercicio'] });
+    r.items.forEach(function (it) { if (ecoAplicar(it)) cambio = true; });
+    e.cursor = r.cursor; e.lectura = Date.now(); e.msg = '';
+  } catch (err) { e.msg = Eco.mensajeError(err); }
+  ecoPulling = false; guardar();
+  const a = document.activeElement;
+  if (cambio && !(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName))) render();
+  if (e.sucias.length || e.sucP.length || e.sucPerfil) ecoProgramar();
+  return cambio;
+}
+async function ecoSincronizar(manual) {
+  const e = state.eco;
+  if (!Eco.listo()) { if (manual) e.msg = Eco.mensajeError(new Error('sin_configurar')); return; }
+  await ecoPull();
+  Object.keys(state.log).forEach(function (f) { if (e.t['d:' + f] === undefined && hecho(state.log[f])) ecoMarcarDia(f); });
+  state.pesos.forEach(function (p) { if (e.t['p:' + p.fecha] === undefined) ecoMarcarPeso(p.fecha); });
+  if (e.t.perfil === undefined && Object.keys(ecoDatosPerfil()).some(function (c) { return ecoDatosPerfil()[c] != null; })) ecoMarcarPerfil();
+  guardar();
+  await ecoFlush(manual);
+  await ecoPull();
 }
 function ecoEstado() {
   const e = state.eco;
   if (!Eco.listo()) return 'Sin configurar: pega la URL y la clave del hub.';
-  const pend = e.sucias.length + e.sucP.length;
+  const pend = e.sucias.length + e.sucP.length + (e.sucPerfil ? 1 : 0);
   let s = e.ultimo ? 'Último envío: ' + new Date(e.ultimo).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '.' : 'Aún no se ha enviado nada.';
+  if (e.lectura) s += ' Última lectura: ' + new Date(e.lectura).toLocaleString('es-CL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) + '.';
   if (pend) s += ' Pendientes de enviar: ' + pend + '.';
   if (e.msg) s += ' ⚠️ ' + e.msg;
   return s;
@@ -631,7 +713,7 @@ function vAjustes() {
     '<label>URL del hub</label><input type="text" data-f="eco" data-k="url" value="' + esc(state.eco.url) + '" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">' +
     '<label>Clave</label><input type="password" data-f="eco" data-k="key" value="' + esc(state.eco.key) + '" autocomplete="off">' +
     '<button class="btn" data-act="ecoPing">Probar conexión</button>' +
-    '<button class="btn" data-act="ecoSync">Enviar todo ahora</button>' +
+    '<button class="btn" data-act="ecoSync">Sincronizar ahora</button>' +
     '<p class="small">' + esc(ui.ecoMsg || '') + '</p>' +
     '<p class="mut small">' + esc(ecoEstado()) + '</p>' +
     '<p class="mut small">La clave se guarda solo en este dispositivo y no va en los respaldos.</p></div>' +
@@ -692,10 +774,8 @@ document.addEventListener('click', function (e) {
     return;
   }
   if (a === 'ecoSync') {
-    Object.keys(state.log).forEach(ecoMarcarDia);
-    state.pesos.forEach(function (p) { ecoMarcarPeso(p.fecha); });
-    guardar(); ui.ecoMsg = 'Enviando…'; render();
-    ecoFlush(true).then(function () { ui.ecoMsg = state.eco.msg ? '' : '✅ Todo enviado.'; if (ui.tab === 'ajustes') render(); });
+    ui.ecoMsg = 'Sincronizando…'; render();
+    ecoSincronizar(true).then(function () { ui.ecoMsg = state.eco.msg ? '' : '✅ Sincronizado: lo de este dispositivo y lo del hub quedaron iguales.'; if (ui.tab === 'ajustes') render(); });
     return;
   }
   if (a === 'exportar') {
@@ -707,9 +787,9 @@ document.addEventListener('click', function (e) {
     document.body.appendChild(l); l.click(); l.remove(); return;
   }
   if (a === 'reset') {
-    if (confirm('¿Borrar todos los datos de esta app? No se puede deshacer.')) {
+    if (confirm('¿Borrar todos los datos de esta app en este dispositivo? No se puede deshacer. Lo que ya está en el hub no se borra.')) {
       const eco = state.eco;                                         // se conserva la conexión con el hub
-      state = nuevoEstado(); state.eco = Object.assign(ecoDefault(), { url: eco.url, key: eco.key, device: eco.device });
+      state = nuevoEstado(); state.eco = Object.assign(ecoDefault(), { url: eco.url, key: eco.key, device: eco.device, cursor: eco.cursor });
       guardar(); render();
     }
     return;
@@ -748,20 +828,22 @@ document.addEventListener('change', function (e) {
     const ex = row.dataset.ex, i = +row.dataset.i, en = ens(hoy());
     en.sets[ex] = en.sets[ex] || [];
     const cur = en.sets[ex][i] || { reps: '', kg: '', done: false };
-    cur[f] = t.value; en.sets[ex][i] = cur; guardar(); return;
+    cur[f] = t.value; en.sets[ex][i] = cur; if (cur.done) { ecoMarcarDia(hoy()); ecoProgramar(); } guardar(); return;
   }
   if (f === 'perfil') {
     const v = t.value === '' ? null : parseFloat(t.value);
-    state.perfil[t.dataset.k] = (v === null || isNaN(v)) ? null : v; guardar(); render(); return;
+    state.perfil[t.dataset.k] = (v === null || isNaN(v)) ? null : v; ecoMarcarPerfil(); guardar(); render(); ecoProgramar(); return;
   }
   if (f === 'video') { state.videos[t.dataset.ex] = t.value.trim(); guardar(); render(); return; }
   if (f === 'nota') { state.notas[t.dataset.ex] = t.value; guardar(); return; }
 });
 
 ecoConfig();
-window.addEventListener('online', ecoProgramar);
+window.addEventListener('online', function () { ecoSincronizar(false); });
+document.addEventListener('visibilitychange', function () { if (!document.hidden) ecoSincronizar(false); });
+setInterval(function () { if (!document.hidden && Eco.listo()) ecoSincronizar(false); }, 180000);
 render();
-if (Eco.listo() && (state.eco.sucias.length || state.eco.sucP.length)) ecoProgramar();   // reenvía lo que quedó pendiente
+if (Eco.listo()) ecoSincronizar(false);   // al abrir: lee lo nuevo del hub y reenvía lo que quedó pendiente
 </script>
 </body>
 </html>
