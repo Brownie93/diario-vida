@@ -2,7 +2,7 @@
 <html lang="es" data-theme="dark" data-accent="dorado">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
 <title>Diario de Vida</title>
 <meta name="theme-color" content="#0f1117">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -309,6 +309,21 @@ textarea.en-text{width:100%;min-height:170px;resize:vertical;background:var(--pa
 .meal-add input[type=time]{width:auto;background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:.35rem .5rem;min-height:42px}
 .meal-add input[type=text]{flex:1 1 180px;width:auto;background:var(--panel)}
 .quest.auto{cursor:default}
+.mis-box{margin-top:.4rem}
+.mis-box summary{cursor:pointer;font-weight:700;font-size:.85rem;color:var(--accent);padding:.5rem 0;list-style:none}
+.mis-box summary::-webkit-details-marker{display:none}
+.mis-box summary small{font-weight:400;color:var(--dim);margin-left:.4rem}
+.mis-row{display:flex;align-items:center;gap:.6rem;padding:.4rem 0;border-bottom:1px solid var(--border)}
+.mis-row b{flex:1;min-width:0;font-size:.88rem;overflow-wrap:anywhere}
+.mis-row small{color:var(--accent);font-family:var(--ff-mono);font-size:.72rem}
+.mis-row .mis-del.sure{color:var(--danger,#e5484d);font-size:.72rem}
+.mis-form{display:grid;grid-template-columns:3.2rem minmax(0,1fr) 4rem;gap:.5rem;margin:.7rem 0 .4rem}
+.mis-form input,.mis-form select{min-width:0;background:var(--panel2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:.55rem .6rem;font-size:1rem}
+.mis-form #misIcon{text-align:center}
+.mis-form .btn{grid-column:1 / -1}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+body.typing .rail{display:none}
+body.typing{padding-bottom:0}
 .quest.auto .qt small{color:var(--dim)}
 
 </style>
@@ -335,7 +350,17 @@ textarea.en-text{width:100%;min-height:170px;resize:vertical;background:var(--pa
       <section class="view active" id="view-yo">
         <div class="yo-grid">
           <div class="card" id="yoHero"></div>
-          <div class="card"><h2>Misiones de hoy</h2><div id="yoQuests"></div></div>
+          <div class="card"><h2>Misiones de hoy</h2><div id="yoQuests"></div>
+            <details class="mis-box" id="misBox"><summary>＋ Mis misiones <small id="misSub"></small></summary>
+              <div id="misList"></div>
+              <form id="misForm" class="mis-form" autocomplete="off">
+                <label class="sr-only" for="misIcon">Ícono</label><input id="misIcon" type="text" maxlength="4" placeholder="🐱" aria-label="Ícono de la misión">
+                <label class="sr-only" for="misName">Nombre</label><input id="misName" type="text" maxlength="40" placeholder="Ej.: Regar las plantas" aria-label="Nombre de la misión" required>
+                <label class="sr-only" for="misXp">XP</label><select id="misXp" aria-label="XP que da"><option>1</option><option>2</option><option selected>3</option><option>5</option><option>8</option><option>10</option></select>
+                <button class="btn primary" type="submit">Agregar</button>
+              </form>
+              <div class="muted sm">Cada misión se marca una vez al día. Tócala arriba para completarla.</div>
+            </details></div>
           <div class="card"><h2>Pastilla · últimos 7 días</h2><div class="muted sm">Toca un día para marcarlo o desmarcarlo.</div><div class="week" id="yoWeek"></div><div class="muted sm" id="yoPillStreak" style="margin-top:.7rem"></div></div>
           <div class="card"><h2>Atributos</h2><div id="yoAttrs"></div></div>
           <div class="card span2"><h2>Mapa de constancia</h2><div class="heat" id="yoHeat"></div><div class="heat-leg"><span><i></i>nada</span><span><i style="background:color-mix(in srgb,var(--accent) 28%,var(--panel2))"></i>pastilla o ánimo</span><span><i style="background:color-mix(in srgb,var(--accent) 60%,var(--panel2))"></i>texto</span><span><i style="background:var(--accent)"></i>texto + foto/video</span><span>● verde = pastilla tomada</span></div></div>
@@ -665,7 +690,7 @@ const S = {
   stats: null,
   hist: { q: '', filter: 'all', mode: 'list', limit: 30 },
   syncing: false, syncAgain: false, syncTimer: null, warnedRejected: false,
-  hub: { cursor: 0, lastOk: 0, sucias: new Set(), mark: {}, dias: {}, comidas: {}, bonus: {}, msg: '', busy: false, again: false, timer: null }
+  hub: { cursor: 0, curMis: 0, mis: { defs: [], hechas: {}, sembrado: false }, lastOk: 0, sucias: new Set(), mark: {}, dias: {}, comidas: {}, bonus: {}, msg: '', busy: false, again: false, timer: null }
 };
 { const d = new Date(); S.calY = d.getFullYear(); S.calM = d.getMonth(); }
 
@@ -1287,7 +1312,7 @@ function misionesHub(f) {
       s: nCo ? co.cocinadas.map(c => c && c.nombre).filter(Boolean).slice(0, 3).join(', ') || 'Cocinaste hoy' : 'Lo marca el Asistente de Cocina' },
     { id: 'juego', i: '🎮', t: 'Un rato de juego', x: 3, done: minB > 0,
       s: minB > 0 ? `${minB} min${Array.isArray(bi.juegos) && bi.juegos.length ? ' · ' + bi.juegos.slice(0, 2).join(', ') : ''}` : 'Lo marca la Bitácora' }
-  ];
+  ].concat(misActivas().map(d => { const ok = misHecha(f, d.id); return { id: 'mis:' + d.id, mid: d.id, propia: true, i: d.i, t: d.n, x: d.x, done: ok, s: ok ? '¡Hecho!' : 'Toca para marcarla' }; }));
 }
 const hubBonusDia = f => misionesHub(f).reduce((n, m) => n + (m.done ? m.x : 0), 0);
 function hubRecalcBonus(f) { const v = hubBonusDia(f); if (v) S.hub.bonus[f] = v; else delete S.hub.bonus[f]; }
@@ -1306,7 +1331,7 @@ function hubPoda() {
 function saveHub() {
   hubPoda();
   const h = S.hub;
-  return dbPut('meta', 'hub', { cursor: h.cursor, lastOk: h.lastOk, sucias: [...h.sucias], dias: h.dias, comidas: h.comidas, bonus: h.bonus }).catch(onStorageError);
+  return dbPut('meta', 'hub', { cursor: h.cursor, curMis: h.curMis, mis: h.mis, lastOk: h.lastOk, sucias: [...h.sucias], dias: h.dias, comidas: h.comidas, bonus: h.bonus }).catch(onStorageError);
 }
 function hubCfg() { Eco.configurar({ url: S.cfg.hubUrl, key: S.cfg.hubKey, device: 'diario-' + String(S.cfg.device || '').slice(0, 10) }); }
 
@@ -1323,7 +1348,7 @@ function hubProgramar(delay = 2500) {
   clearTimeout(S.hub.timer);
   S.hub.timer = setTimeout(() => hubSync(), delay);
 }
-const hubPendientes = () => S.hub.sucias.size + Object.values(S.hub.comidas).reduce((n, l) => n + l.filter(c => c.dirty).length, 0);
+const hubPendientes = () => S.hub.sucias.size + Object.values(S.hub.comidas).reduce((n, l) => n + l.filter(c => c.dirty).length, 0) + misPendientes();
 
 /** Reenvía los últimos 60 días con datos (primera conexión, cambio de hub o botón manual). */
 function hubMarcarTodo() {
@@ -1332,6 +1357,8 @@ function hubMarcarTodo() {
   for (const d of S.days.values()) if (d.pill && d.date >= desde) S.hub.sucias.add(d.date);
   for (const [f, l] of Object.entries(S.hub.comidas)) if (f >= desde) { S.hub.sucias.add(f); l.forEach(c => { c.dirty = true; }); }
   S.hub.sucias.forEach(f => { S.hub.mark[f] = (S.hub.mark[f] || 0) + 1; });
+  S.hub.mis.defs.forEach(d => { d.dirty = true; });
+  for (const [f, o] of Object.entries(S.hub.mis.hechas)) if (f >= desde) Object.values(o).forEach(h => { h.dirty = true; });
   return saveHub();
 }
 
@@ -1355,8 +1382,10 @@ async function hubPush() {
     items.push(Eco.registro('diario', 'comida', f, c.del ? null : { hora: c.hora, texto: c.texto }, { id: `diario:comida:${f}:${c.id}`, t: c.t, del: !!c.del }));
     com.push({ c, t: c.t });
   }
+  const mis = misItems(items);
   if (!items.length) return;
   const r = await Eco.enviar(items);
+  misEnviado(mis);
   for (const f of fechas) if (S.hub.mark[f] === marks[f]) { S.hub.sucias.delete(f); delete S.hub.mark[f]; }
   for (const x of com) if (x.c.t === x.t) x.c.dirty = false;
   if (r.rejected && r.rejected.length) S.hub.msg = `El hub rechazó ${r.rejected.length} ${plural(r.rejected.length, 'registro', 'registros')} (${r.rejected[0].motivo}).`;
@@ -1365,6 +1394,7 @@ async function hubPush() {
 function hubAplicar(it) {
   const f = it.fecha;
   if (it.app === 'diario') {
+    if (it.tipo === 'misdef' || it.tipo === 'mision') return misAplicar(it);
     if (it.tipo !== 'comida') return false;
     const cid = String(it.id).split(':').slice(3).join(':');
     if (!cid) return false;
@@ -1388,6 +1418,9 @@ async function hubPull() {
   let cambio = false;
   for (const it of r.items) if (hubAplicar(it)) cambio = true;
   S.hub.cursor = Math.max(S.hub.cursor, r.cursor || 0);
+  const r2 = await Eco.traer(S.hub.curMis || 0, { apps: ['diario'] });      // las misiones propias no caducan: se leen sin límite de fecha
+  for (const it of r2.items) if (it.tipo === 'misdef' && hubAplicar(it)) cambio = true;
+  S.hub.curMis = Math.max(S.hub.curMis || 0, r2.cursor || 0);
   return cambio;
 }
 
@@ -1467,10 +1500,160 @@ async function persistHub() {
   const cambio = url !== S.cfg.hubUrl;
   S.cfg.hubUrl = url; S.cfg.hubKey = key;
   await saveCfg();
-  if (cambio) { S.hub.cursor = 0; S.hub.lastOk = 0; }
+  if (cambio) { S.hub.cursor = 0; S.hub.curMis = 0; S.hub.lastOk = 0; }
   if (hubOn()) { hubCfg(); if (cambio || !S.hub.lastOk) await hubMarcarTodo(); hubProgramar(500); }
   if (url && !/\/exec$/.test(url)) toast('La URL debería terminar en /exec');
   renderHubInfo();
+}
+
+
+/* ═══════════════ misiones propias (las agrega Edu; la primera: «Limpiar caja de arena») ═══════════════
+ * Se guardan en este dispositivo y, con el hub conectado, se comparten entre dispositivos:
+ *   definición  diario:misdef:2000-01-01:<id>   datos {n, i, x}
+ *   hecha       diario:mision:<fecha>:<id>      datos {on:true}   (del = desmarcada)
+ * Cada registro tiene su hora (t) y gana el más nuevo; nada se pisa entre misiones distintas.
+ */
+const MIS_FECHA = '2000-01-01';
+const misActivas = () => S.hub.mis.defs.filter(d => !d.del);
+const misHecha = (f, id) => !!(((S.hub.mis.hechas[f] || {})[id] || {}).on);
+const misPendientes = () => S.hub.mis.defs.filter(d => d.dirty).length + Object.values(S.hub.mis.hechas).reduce((n, o) => n + Object.values(o).filter(h => h.dirty).length, 0);
+const misId = () => 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+
+function misSembrar() {
+  const m = S.hub.mis;
+  if (m.sembrado) return;
+  m.sembrado = true;
+  if (!m.defs.some(d => d.id === 'arena')) m.defs.push({ id: 'arena', i: '🐱', n: 'Limpiar caja de arena', x: 3, tm: 1, del: false, dirty: false });
+  saveHub();
+}
+function misRecalc() {
+  const fechas = new Set([S.today, ...Object.keys(S.hub.mis.hechas)]);
+  fechas.forEach(f => hubRecalcBonus(f));
+}
+function misCambio() { misRecalc(); refreshDerived(); renderMis(); saveHub(); hubProgramar(); }
+
+function toggleMision(f, id) {
+  if (!S.hub.mis.defs.some(d => d.id === id && !d.del)) return;
+  const o = S.hub.mis.hechas[f] || (S.hub.mis.hechas[f] = {}), h = o[id] || (o[id] = { on: false, t: 0, dirty: false });
+  h.on = !h.on; h.t = stamp(h.t); h.dirty = true;
+  misCambio();
+}
+function addMision(icono, nombre, xp) {
+  const n = String(nombre || '').trim().slice(0, 40);
+  if (!n) return false;
+  const x = Math.max(1, Math.min(10, Math.round(Number(xp) || 3)));
+  const i = (String(icono || '').trim() || '⭐').slice(0, 4);
+  S.hub.mis.defs.push({ id: misId(), i, n, x, tm: stamp(0), del: false, dirty: true });
+  misCambio();
+  return true;
+}
+function delMision(id) {
+  const d = S.hub.mis.defs.find(q => q.id === id);
+  if (!d || d.del) return;
+  d.del = true; d.dirty = true; d.tm = stamp(d.tm);
+  misCambio();
+}
+
+function misItems(items) {
+  const sent = [];
+  for (const d of S.hub.mis.defs) if (d.dirty) {
+    items.push(Eco.registro('diario', 'misdef', MIS_FECHA, d.del ? null : { n: d.n, i: d.i, x: d.x }, { id: `diario:misdef:${MIS_FECHA}:${d.id}`, t: d.tm, del: !!d.del }));
+    sent.push({ r: d, t: d.tm, k: 'tm' });
+  }
+  for (const [f, o] of Object.entries(S.hub.mis.hechas)) for (const [id, h] of Object.entries(o)) if (h.dirty) {
+    items.push(Eco.registro('diario', 'mision', f, h.on ? { on: true } : null, { id: `diario:mision:${f}:${id}`, t: h.t, del: !h.on }));
+    sent.push({ r: h, t: h.t, k: 't' });
+  }
+  return sent;
+}
+function misEnviado(sent) { for (const x of sent) if (x.r[x.k] === x.t) x.r.dirty = false; }
+
+function misAplicar(it) {
+  const m = S.hub.mis, partes = String(it.id).split(':'), id = partes.slice(3).join(':');
+  if (!id) return false;
+  if (it.tipo === 'misdef') {
+    const cur = m.defs.find(d => d.id === id);
+    if (cur && cur.tm >= it.t) return false;
+    const d = it.datos || {};
+    const nuevo = { id, i: String(d.i || '⭐').slice(0, 4), n: String(d.n || '').slice(0, 40) || (cur ? cur.n : 'Misión'), x: Math.max(1, Math.min(10, Math.round(Number(d.x) || 3))), tm: it.t, del: !!it.del, dirty: false };
+    if (cur) Object.assign(cur, nuevo); else m.defs.push(nuevo);
+    misRecalc(); renderMis();
+    return true;
+  }
+  const o = m.hechas[it.fecha] || (m.hechas[it.fecha] = {}), cur = o[id];
+  if (cur && cur.t >= it.t) return false;
+  o[id] = { on: !it.del && !!(it.datos && it.datos.on), t: it.t, dirty: false };
+  hubRecalcBonus(it.fecha);
+  return true;
+}
+
+/* ── pantalla: lista y formulario dentro de «Misiones de hoy» ── */
+function renderMis() {
+  const box = $('#misList'); if (!box) return;
+  const l = misActivas();
+  box.textContent = '';
+  for (const d of l) {
+    const row = document.createElement('div'); row.className = 'mis-row'; row.dataset.id = d.id;
+    const i = document.createElement('span'); i.textContent = d.i;
+    const n = document.createElement('b'); n.textContent = d.n;
+    const x = document.createElement('small'); x.textContent = '+' + d.x + ' XP';
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'ib mis-del'; b.textContent = '✕'; b.setAttribute('aria-label', 'Quitar la misión ' + d.n); b.title = 'Quitar';
+    row.append(i, n, x, b); box.append(row);
+  }
+  const sub = $('#misSub'); if (sub) sub.textContent = l.length ? `${l.length} ${plural(l.length, 'misión propia', 'misiones propias')}${hubOn() ? ' · se comparten con tus otros dispositivos' : ' · solo en este dispositivo hasta conectar el hub'}` : 'Aún no tienes misiones propias';
+}
+function bindMis() {
+  const f = $('#misForm'); if (!f) return;
+  f.addEventListener('submit', ev => {
+    ev.preventDefault();
+    if (addMision($('#misIcon').value, $('#misName').value, $('#misXp').value)) { $('#misName').value = ''; $('#misIcon').value = ''; toast('Misión agregada ✓'); }
+  });
+  $('#misList').addEventListener('click', ev => {
+    const b = ev.target.closest('.mis-del'); if (!b) return;
+    const id = b.closest('.mis-row').dataset.id;
+    if (b.dataset.sure === id) { delMision(id); toast('Misión quitada'); }
+    else { b.dataset.sure = id; b.textContent = '¿Quitar?'; b.classList.add('sure'); setTimeout(() => { if (b.isConnected) { delete b.dataset.sure; b.textContent = '✕'; b.classList.remove('sure'); } }, 3000); }
+  });
+}
+
+/* ═══════════════ teclado en pantalla: que nunca tape lo que escribes ═══════════════
+ * 1) Mientras escribes en el celular se esconde la barra de abajo (iba flotando sobre el teclado y tapaba el texto).
+ * 2) Al crecer el texto, se desplaza la pantalla para dejar siempre visible la línea donde está el cursor. */
+function setupKeyboard() {
+  const vv = window.visualViewport, root = document.documentElement;
+  const esTexto = el => !!el && (el.tagName === 'TEXTAREA' || (el.tagName === 'INPUT' && !/^(checkbox|radio|button|submit|file|range|color)$/.test(el.type)));
+  const angosto = () => window.matchMedia('(max-width:899px)').matches;
+  const estado = () => {
+    const h = vv ? Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop)) : 0;
+    root.style.setProperty('--kbh', h + 'px');
+    document.body.classList.toggle('typing', angosto() && esTexto(document.activeElement));
+  };
+  const cursorVisible = () => {
+    const ta = document.activeElement;
+    if (!ta || ta.tagName !== 'TEXTAREA' || !angosto()) return;
+    const cs = getComputedStyle(ta), m = document.createElement('div');
+    for (const k of ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight', 'textTransform', 'wordSpacing', 'textIndent', 'tabSize', 'paddingTop', 'paddingRight', 'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth', 'borderBottomWidth', 'borderLeftWidth', 'boxSizing']) m.style[k] = cs[k];
+    m.style.position = 'absolute'; m.style.visibility = 'hidden'; m.style.left = '-9999px'; m.style.top = '0'; m.style.whiteSpace = 'pre-wrap'; m.style.overflowWrap = 'break-word'; m.style.width = ta.offsetWidth + 'px';
+    m.textContent = ta.value.slice(0, ta.selectionStart);
+    const mk = document.createElement('span'); mk.textContent = '​'; m.appendChild(mk);
+    document.body.appendChild(m);
+    const alto = mk.offsetHeight || parseFloat(cs.lineHeight) || 24, y = mk.offsetTop;
+    m.remove();
+    const r = ta.getBoundingClientRect();
+    const abajo = r.top + y + alto - ta.scrollTop, arriba = r.top + y - ta.scrollTop;
+    const vTop = (vv ? vv.offsetTop : 0) + 70, vBot = (vv ? vv.offsetTop + vv.height : window.innerHeight) - 28;
+    if (abajo > vBot) window.scrollBy(0, Math.ceil(abajo - vBot));
+    else if (arriba < vTop) window.scrollBy(0, Math.floor(arriba - vTop));
+  };
+  let raf = 0;
+  const luego = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(() => { estado(); cursorVisible(); }); };
+  document.addEventListener('focusin', () => { estado(); setTimeout(luego, 120); setTimeout(luego, 380); });
+  document.addEventListener('focusout', () => setTimeout(estado, 60));
+  document.addEventListener('input', luego, true);
+  document.addEventListener('selectionchange', () => { if (document.activeElement && document.activeElement.tagName === 'TEXTAREA') luego(); });
+  window.addEventListener('resize', luego);
+  if (vv) { vv.addEventListener('resize', luego); vv.addEventListener('scroll', estado); }
+  window.__dvKb = { estado, cursorVisible };
 }
 
 /* ═══════════════ interfaz: base ═══════════════ */
@@ -1547,9 +1730,12 @@ function renderYo() {
     { a: 'write', i: '✍️', t: 'Escribir la entrada de hoy', s: e.text ? '¡Hecho!' : 'Cuenta cómo va tu día', x: 10, d: e.text > 0 },
     { a: 'photo', i: '📷', t: 'Guardar un recuerdo', s: e.media ? '¡Hecho!' : 'Una foto o video (opcional)', x: 5, d: e.media > 0 }
   ];
-  const hm = misionesHub(S.today).filter(m => m.local || hubOn());
+  const hm = misionesHub(S.today).filter(m => m.local || m.propia || hubOn());
+  renderMis();
   $('#yoQuests').innerHTML = quests.map(q => `<button class="quest${q.d ? ' done' : ''}" data-a="${q.a}"><span class="qi">${q.i}</span><span class="qt"><b>${q.t}</b><small>${q.s}</small></span><span class="qx">+${q.x} XP</span><span class="qc">✓</span></button>`).join('') +
-    hm.map(m => m.local
+    hm.map(m => m.propia
+      ? `<button class="quest${m.done ? ' done' : ''}" data-a="mis" data-id="${esc(m.mid)}"><span class="qi">${esc(m.i)}</span><span class="qt"><b>${esc(m.t)}</b><small>${esc(m.s)}</small></span><span class="qx">+${m.x} XP</span><span class="qc">✓</span></button>`
+      : m.local
       ? `<button class="quest${m.done ? ' done' : ''}" data-a="meal"><span class="qi">${m.i}</span><span class="qt"><b>${esc(m.t)}</b><small>${esc(m.s)}</small></span><span class="qx">+${m.x} XP</span><span class="qc">✓</span></button>`
       : `<div class="quest auto${m.done ? ' done' : ''}" data-m="${m.id}"><span class="qi">${m.i}</span><span class="qt"><b>${esc(m.t)}</b><small>${esc(m.s)}</small></span><span class="qx">+${m.x} XP</span><span class="qc">✓</span></div>`).join('');
 
@@ -2000,6 +2186,7 @@ function bind() {
     const q = ev.target.closest('.quest'); if (!q || q.classList.contains('auto')) return;   // las misiones automáticas las marcan las otras apps
     const a = q.dataset.a;
     if (a === 'pill') setPill(S.today, !getDay(S.today).pill);
+    else if (a === 'mis') toggleMision(S.today, q.dataset.id);
     else if (a === 'meal') { selectDay(S.today); goView('diario'); const t = $('#mealText'); if (t) t.focus(); }
     else {
       selectDay(S.today); goView('diario');
@@ -2007,6 +2194,8 @@ function bind() {
       if (last) { if (a === 'write') $('.en-text', last).focus(); else $('.en-file', last).click(); }
     }
   });
+  bindMis();
+  setupKeyboard();
   $('#yoWeek').addEventListener('click', ev => { const b = ev.target.closest('button[data-d]'); if (b) setPill(b.dataset.d, !getDay(b.dataset.d).pill); });
   $('#yoMem').addEventListener('click', ev => { const b = ev.target.closest('.mem'); if (b) { selectDay(b.dataset.d, b.dataset.id); goView('diario'); } });
 
@@ -2268,7 +2457,8 @@ async function init() {
   const sy = await dbGet('meta', 'sync');
   if (sy) { S.sync.cursor = sy.cursor || 0; S.sync.lastOk = sy.lastOk || 0; }
   const hb = await dbGet('meta', 'hub');
-  if (hb) Object.assign(S.hub, { cursor: hb.cursor || 0, lastOk: hb.lastOk || 0, sucias: new Set(hb.sucias || []), dias: hb.dias || {}, comidas: hb.comidas || {}, bonus: hb.bonus || {} });
+  if (hb) Object.assign(S.hub, { cursor: hb.cursor || 0, lastOk: hb.lastOk || 0, sucias: new Set(hb.sucias || []), dias: hb.dias || {}, comidas: hb.comidas || {}, bonus: hb.bonus || {}, curMis: hb.curMis || 0, mis: hb.mis && Array.isArray(hb.mis.defs) ? { defs: hb.mis.defs, hechas: hb.mis.hechas || {}, sembrado: !!hb.mis.sembrado } : { defs: [], hechas: {}, sembrado: false } });
+  misSembrar();
   if (hubOn()) hubCfg();
   await migrateV1();
   if (await migrateV2()) { S.sync.cursor = 0; await saveSyncMeta(); }   // el servidor nuevo usa otro formato: se vuelve a sincronizar todo
